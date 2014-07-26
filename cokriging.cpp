@@ -9,8 +9,6 @@
 #include <cmath>
 #include "lpkinterface.h"
 using namespace std;
-
-//Testing git functionality
 //************************************************
 cokriging::cokriging(){
     //constructor
