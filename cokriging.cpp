@@ -58,9 +58,8 @@ void Write1Darray(double A[],int m,int n){
                b++;
                cout << endl;
             }
-
         }
-     }
+    }
 }
 //************************************************
 void vec2array(vector<vector <double> > Vec,double Array[]){
@@ -275,7 +274,22 @@ void cokriging::buildModel(){
    cout <<"\nC2\n"; Write1Darray(C2,ne,nc);
    cout <<"\nC3\n"; Write1Darray(C3,nc,ne);
    cout <<"\nC4\n"; Write1Darray(C4,ne,ne);
-   cout <<"\nNeed to confirm this is the right one \n"; Write1Darray(C,ne+nc,ne+nc);
+   cout <<"\nC\n"; Write1Darray(C,ne+nc,ne+nc);
+   double UC[(ne+nc)*(ne+nc)];
+   for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
+   Cholesky(ne+nc,C,UC); 
+   cout <<"\nUC\n"; Write1Darray(UC,ne+nc,ne+nc);
+   double Y[nc+ne];
+   double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} 
+   for(int ii = 0;ii< nc;ii++){Y[ii] = Yc_a[ii];}
+   for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye_a[ii];}
+   cout <<"\nY\n"; Write1Darray(Y,ne+nc,1);
+   num = mu_num_den(UC,Y,ne+nc,oneNeNc);
+   //Begin testing here
+   cout <<"\nNUM\n"; Write1Darray(num,1,1);
+   den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
+   mu = num[0]/den[0];
+   cout << "\nmu\n" << mu;
    
 }
 //************************************************
@@ -307,6 +321,10 @@ double* transpose(double arr[],int n){
 //************************************************
 void Cholesky(int d,double*S,double*D){
     //solve cholesky of an array
+    //inputs: 
+    //    d: size
+    //    S: input array
+    //    D: output array. Cholesky of input array. 
     for(int k=0;k<d;++k){
        double sum=0.;
        for(int p=0;p<k;++p)sum+=D[k*d+p]*D[k*d+p];

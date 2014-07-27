@@ -43,6 +43,7 @@ private:
     double* d;
     double SigmaSqrc;
     double SigmaSqrd;
+    double mu;
 };
 // Other used functions
 vector <vector <double> > buildPsi(int n,vector <double> x,vector <double> theta );
@@ -50,3 +51,4 @@ double sum(vector <double> x1,vector <double> x2,vector <double> theta,int p,int
 vector<vector<double > > chol(vector<vector<double > > PsiC);
 double* transpose(double arr[],int n);
 double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN);
+void Cholesky(int d,double*S,double*D);
