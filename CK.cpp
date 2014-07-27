@@ -59,14 +59,17 @@ void ReadData(){
     vector<double> InitXc = Str2Double(Xc);
     vector<double> InitYc = Str2Double(Yc);
     //Fill arrays need to switch with a for loop and some case statements
-    //cout << "\nXc: " ;for(int ii=0; ii<InitXc.size();ii++){ cout << InitXc[ii]<<" ";}
-    //cout << "\nXe: " ;for(int ii=0; ii<InitXe.size();ii++){ cout << InitXe[ii]<<" ";}
-    //cout << "\nYc: " ;for(int ii=0; ii<InitYc.size();ii++){ cout << InitYc[ii]<<" ";}
-    //cout << "\nYe: " ;for(int ii=0; ii<InitYe.size();ii++){ cout << InitYe[ii]<<" " ;}
-    vector<double> InitthetaD(1,-1.1026);
-    vector<double> InitthetaC(1,1);
+    double InitthetaD[] = {-1.1026};
+    double InitthetaC[] = {1};
     double Initrho = 1.9454;
-    cokriging CK(InitXe,InitYe,InitXc,InitYc,InitthetaD,InitthetaC,Initrho);
+    int nc = InitXc.size();
+    int ne = InitXe.size();
+    double* Xe_a = vec2array(InitXe);
+    double* Ye_a = vec2array(InitYe);
+    double* Xc_a = vec2array(InitXc);
+    double* Yc_a = vec2array(InitYc);
+    cokriging CK(Xe_a,Ye_a,Xc_a,Yc_a,InitthetaD,InitthetaC,Initrho,nc,ne);
+    cout <<"Begin building cokriging model" << endl;
     CK.buildModel();
 //    CK.write(); 
     cout << endl;

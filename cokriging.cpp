@@ -13,24 +13,24 @@ using namespace std;
 //************************************************
 cokriging::cokriging(){
     //constructor
-    Xe.push_back(0);
-    Ye.push_back(0);
-    Xc.push_back(0);
-    Yc.push_back(0);
 }
 //************************************************
-cokriging::cokriging(vector <double> Initxe,vector <double> Initye,vector <double> Initxc,
-    vector <double> Inityc,vector<double>InitthetaD,vector<double> InitthetaC,double initrho){
+cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Inityc[],
+    double InitthetaD[],double InitthetaC[],double Initrho,
+    int Initnc, int Initne){
     //intialize input variables
-    Xe = Initxe;
-    Ye = Initye;
-    Xc = Initxc;
-    Yc = Inityc;
-    thetaD = InitthetaD;
-    thetaC = InitthetaC;
-    rho = initrho;
-    for(int ii = 0;ii < thetaD.size();ii++){thetaD[ii] = pow(10.0,InitthetaD[ii]); }   
-    for(int ii = 0;ii < thetaC.size();ii++){thetaC[ii] = pow(10.0,InitthetaC[ii]); }   
+    ne = Initne;
+    nc = Initnc;
+    Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
+    Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
+    Xc = new double[nc]; for(int ii =0;ii<nc;ii++){Xc[ii] = Initxc[ii];}
+    Yc = new double[nc]; for(int ii =0;ii<nc;ii++){Yc[ii] = Inityc[ii];}
+    int numofdim = 1;//will be passed in once i Move to 2D
+    rho = Initrho;
+    thetaD = new double[numofdim];  
+    thetaC = new double[numofdim];
+    for(int ii = 0;ii < numofdim;ii++){thetaD[ii] = pow(10.0,InitthetaD[ii]); }   
+    for(int ii = 0;ii < numofdim;ii++){thetaC[ii] = pow(10.0,InitthetaC[ii]); }   
 }
 //************************************************
 void WriteVec(vector<vector<double> > V){
@@ -95,6 +95,17 @@ void vec2array(vector<double > Vec,double Array[]){
 
 }
 //************************************************
+double* vec2array(vector<double > Vec){
+    //overloaded function takes a one -d vector to an array
+    double* Array = new double[Vec.size()];
+    for(int ii = 0; ii < Vec.size();ii++){
+        Array[ii] = Vec[ii];
+     }
+    return Array;
+}
+//************************************************
+
+
 vector <vector<double> > cokriging::VecInverse(vector<vector<double> > Vec){//currently unused
    //invert a square vector
    int m = Vec.size();
@@ -110,7 +121,7 @@ vector <vector<double> > cokriging::VecInverse(vector<vector<double> > Vec){//cu
    return Vec;
 }
 //************************************************
-double sum(vector <double> x1,vector <double> x2,vector <double> theta,int p,int ii,int jj){
+double sum(double x1[],double x2[],double theta[],int p,int ii,int jj){
      //sum a vector in a unique way used for constructing cokriging model
      double sumVal = 0;
          //following line is for 2d
@@ -125,14 +136,10 @@ double sum(vector <double> x1,vector <double> x2,vector <double> theta,int p,int
 //************************************************
 void cokriging::buildModel(){
     //Main function for developing the cokriging model
-    ne = Ye.size();
-    nc = Yc.size();
     //initialize cokriging variables
-    double UPsiXc_a[nc*nc]; 
-    double Yc_a[nc]; 
-    double UPsidXe_a[ne*ne]; 
-    double Ye_a[ne]; 
     double Y[nc+ne];
+    double UPsiXc_a[nc*nc]; 
+    double UPsidXe_a[ne*ne]; 
     double CKPsiXc_a[nc*nc]; 
     double CKPsiXcXe_a[nc*ne]; 
     double CKPsiXeXc_a[ne*nc]; 
@@ -141,7 +148,6 @@ void cokriging::buildModel(){
     double C[(nc+ne)*(nc+ne)];
     double UC[(ne+nc)*(ne+nc)];
     vector<int> one(ne+nc,1);
-    vector<double> y = Yc;y.insert(y.end(),Ye.begin(),Ye.end());//concatinate array
     int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     double* num; //Temporary variable
     double* den; //Temporary variable
@@ -150,6 +156,11 @@ void cokriging::buildModel(){
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
     double* dif = new double[nc];
     double* difd = new double[ne];
+    // used to contruct C
+    double C1[nc*nc];
+    double C2[nc*ne];
+    double C3[ne*nc];
+    double C4[ne*ne];
     //Build all the various Psi
     CKPsiXc = buildPsi(nc,Xc,thetaC);
     UPsiXc = chol(CKPsiXc);
@@ -157,16 +168,16 @@ void cokriging::buildModel(){
     UPsiXe = chol(CKPsiXe);
     CKPsidXe = buildPsi(ne,Xe,thetaD);
     UPsidXe = chol(CKPsidXe);
-    CKPsiXcXe.resize(Xc.size(),vector<double>(Xe.size(),0)); 
-    for (int ii = 0;ii<Xc.size();ii++){
-         for(int jj=0;jj<Xe.size();jj++){
+    CKPsiXcXe.resize(nc,vector<double>(ne,0)); 
+    for (int ii = 0;ii<nc;ii++){
+         for(int jj=0;jj<ne;jj++){
              CKPsiXcXe[ii][jj] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
          }
     }
 
-    CKPsiXeXc.resize(Xe.size(),vector<double>(Xc.size(),0)); 
-    for (int ii = 0;ii<Xc.size();ii++){
-         for(int jj=0;jj<Xe.size();jj++){
+    CKPsiXeXc.resize(ne,vector<double>(nc,0)); 
+    for (int ii = 0;ii<nc;ii++){ 
+         for(int jj=0;jj<ne;jj++){
              CKPsiXeXc[jj][ii] = CKPsiXcXe[ii][jj];
          }
     }
@@ -176,13 +187,12 @@ void cokriging::buildModel(){
     // may actually convert all vectors to array from the beginning since I don't think I need them
     
     vec2array(UPsiXc,UPsiXc_a);
-    vec2array(Yc,Yc_a);
     cout << "a:\n ";
     Write1Darray(UPsiXc_a,nc,nc);
     
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
-    num = mu_num_den(UPsiXc_a,Yc_a ,nc,oneNc);
+    num = mu_num_den(UPsiXc_a,Yc ,nc,oneNc);
     den = mu_num_den(UPsiXc_a,oneNc,nc,oneNc);
     muc = num[0]/den[0];
     d = new double[nc];
@@ -190,7 +200,6 @@ void cokriging::buildModel(){
         d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
     } 
 
-    vec2array(Ye,Ye_a);
     vec2array(UPsidXe,UPsidXe_a);
     cout << "\n: UPsixe_a \n";
     Write1Darray(UPsidXe_a,ne,ne);
@@ -211,10 +220,6 @@ void cokriging::buildModel(){
     num = mu_num_den(UPsidXe_a,difd,ne,difd);
     SigmaSqrd = num[0]/ne;
     //construct C
-    double C1[nc*nc];
-    double C2[nc*ne];
-    double C3[ne*nc];
-    double C4[ne*ne];
     vec2array(CKPsiXc,CKPsiXc_a);
     vec2arrayNonSquare(CKPsiXcXe,CKPsiXcXe_a);
     vec2arrayNonSquare(CKPsiXeXc,CKPsiXeXc_a);
@@ -282,8 +287,8 @@ void cokriging::buildModel(){
     for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
     Cholesky(ne+nc,C,UC); 
     cout <<"\nUC\n"; Write1Darray(UC,ne+nc,ne+nc);
-    for(int ii = 0;ii< nc;ii++){Y[ii] = Yc_a[ii];}
-    for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye_a[ii];}
+    for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
+    for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
     cout <<"\nY\n"; Write1Darray(Y,ne+nc,1);
     num = mu_num_den(UC,Y,ne+nc,oneNeNc);
     //Begin testing here
@@ -359,7 +364,7 @@ vector<vector<double > > chol(vector<vector<double> > PsiC){
     return UPsiV; 
 }
 //************************************************
-vector <vector <double> > buildPsi(int n,const vector <double> x,const vector <double> theta ){
+vector <vector <double> > buildPsi(int n,double x[],double theta[] ){
     //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
     // this function using any private variables.
     // However I should be able to make this more opject oriented, by converting the class to a kriging class
@@ -381,7 +386,6 @@ vector <vector <double> > buildPsi(int n,const vector <double> x,const vector <d
             CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
         }
     }
-    for(int ii=0;ii<x.size();ii++){cout << x[ii] << " ";} cout<<endl;
    
    return CKPsiX;
 
@@ -391,15 +395,15 @@ void cokriging::write(){
     // used for debugging
     //Print private variables to screen
     //Print input variables to screen   
-    //cout << "\nXc: " ;for(int ii=0; ii<Xc.size();ii++){ cout << Xc[ii]<<" ";}
+    //cout << "\nXc: " ;for(int ii=0; ii<nc;ii++){ cout << Xc[ii]<<" ";}
     //cout << "\nXe: " ;for(int ii=0; ii<Xe.size();ii++){ cout << Xe[ii]<<" ";}
-    cout << "\nYc: " ;for(int ii=0; ii<Yc.size();ii++){ cout << Yc[ii]<<" ";}
+    //cout << "\nYc: " ;for(int ii=0; ii<Yc.size();ii++){ cout << Yc[ii]<<" ";}
     //cout << "\nYe: " ;for(int ii=0; ii<Ye.size();ii++){ cout << Ye[ii]<<" " ;}
     //
     //Print calculated variables to screen
-    cout << "\nThetaD: " ;for(int ii=0; ii<thetaD.size();ii++){ cout << thetaD[ii]<<" " ;}
-    cout << "\nThetaC: " ;for(int ii=0; ii<thetaC.size();ii++){ cout << thetaC[ii]<<" " ;}
-    cout << "\nRho: " << rho;//for(int ii=0; ii<rho.size();ii++){ cout << rho[ii]<<" " ;}
+    //cout << "\nThetaD: " ;for(int ii=0; ii<thetaD.size();ii++){ cout << thetaD[ii]<<" " ;}
+    //cout << "\nThetaC: " ;for(int ii=0; ii<thetaC.size();ii++){ cout << thetaC[ii]<<" " ;}
+    //cout << "\nRho: " << rho;//for(int ii=0; ii<rho.size();ii++){ cout << rho[ii]<<" " ;}
     cout << "\nPsiXc: ";
     WriteVec(CKPsiXc); 
     cout << "\nUPsiXc: ";
