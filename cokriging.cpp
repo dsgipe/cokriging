@@ -1,5 +1,6 @@
 //************************************************
 //Implementation file cokriging
+//based on MATLAB code written by A I J Forrester
 //Currently used for 1-D cokriging
 //************************************************
 #include "cokriging.h"
@@ -127,8 +128,28 @@ void cokriging::buildModel(){
     ne = Ye.size();
     nc = Yc.size();
     //initialize cokriging variables
+    double UPsiXc_a[nc*nc]; 
+    double Yc_a[nc]; 
+    double UPsidXe_a[ne*ne]; 
+    double Ye_a[ne]; 
+    double Y[nc+ne];
+    double CKPsiXc_a[nc*nc]; 
+    double CKPsiXcXe_a[nc*ne]; 
+    double CKPsiXeXc_a[ne*nc]; 
+    double CKPsiXe_a[ne*ne]; 
+    double CKPsidXe_a[ne*ne];
+    double C[(nc+ne)*(nc+ne)];
+    double UC[(ne+nc)*(ne+nc)];
     vector<int> one(ne+nc,1);
     vector<double> y = Yc;y.insert(y.end(),Ye.begin(),Ye.end());//concatinate array
+    int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
+    double* num; //Temporary variable
+    double* den; //Temporary variable
+    double* oneNe = new double[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
+    double* oneNc = new double[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
+    double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
+    double* dif = new double[nc];
+    double* difd = new double[ne];
     //Build all the various Psi
     CKPsiXc = buildPsi(nc,Xc,thetaC);
     UPsiXc = chol(CKPsiXc);
@@ -136,7 +157,6 @@ void cokriging::buildModel(){
     UPsiXe = chol(CKPsiXe);
     CKPsidXe = buildPsi(ne,Xe,thetaD);
     UPsidXe = chol(CKPsidXe);
-    int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     CKPsiXcXe.resize(Xc.size(),vector<double>(Xe.size(),0)); 
     for (int ii = 0;ii<Xc.size();ii++){
          for(int jj=0;jj<Xe.size();jj++){
@@ -155,151 +175,137 @@ void cokriging::buildModel(){
     //convert vector to array for lapack
     // may actually convert all vectors to array from the beginning since I don't think I need them
     
-   double UPsiXc_a[nc*nc]; 
-   double Yc_a[nc]; 
-   vec2array(UPsiXc,UPsiXc_a);
-   vec2array(Yc,Yc_a);
-   cout << "a:\n ";
-   Write1Darray(UPsiXc_a,nc,nc);
-   
-   // solve the rest of the kriging model
-   //left it as an array since multi-dimensional may need an array; and it is more convenient
-   double* num;
-   double* den;
-   double* oneNe = new double[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} 
-   double* oneNc = new double[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} 
-   num = mu_num_den(UPsiXc_a,Yc_a ,nc,oneNc);
-   den = mu_num_den(UPsiXc_a,oneNc,nc,oneNc);
-   muc = num[0]/den[0];
-   d = new double[nc];
-   for(int ii = 0;ii<ne;ii++){
-       d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
-   } 
+    vec2array(UPsiXc,UPsiXc_a);
+    vec2array(Yc,Yc_a);
+    cout << "a:\n ";
+    Write1Darray(UPsiXc_a,nc,nc);
+    
+    // solve the rest of the kriging model
+    //left it as an array since multi-dimensional may need an array; and it is more convenient
+    num = mu_num_den(UPsiXc_a,Yc_a ,nc,oneNc);
+    den = mu_num_den(UPsiXc_a,oneNc,nc,oneNc);
+    muc = num[0]/den[0];
+    d = new double[nc];
+    for(int ii = 0;ii<ne;ii++){
+        d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
+    } 
 
-   double UPsidXe_a[ne*ne]; 
-   double Ye_a[ne]; 
-   vec2array(Ye,Ye_a);
-   vec2array(UPsidXe,UPsidXe_a);
-   cout << "\n: UPsixe_a \n";
-   Write1Darray(UPsidXe_a,ne,ne);
-   
-   num = mu_num_den(UPsidXe_a,d,ne,oneNe);
-   den = mu_num_den(UPsidXe_a,oneNe,ne,oneNe);
-   cout << "\nnum: " << num[0];
-   cout << "\nden: " << den[0];
-   mud = num[0]/den[0]; 
-   double* dif = new double[nc];
-   for(int ii=0;ii<nc;ii++){
-       dif[ii] = Yc[ii]-muc; 
-   }
-   num = mu_num_den(UPsiXc_a,dif,nc,dif);
-   SigmaSqrc = num[0]/nc;
-   double* difd = new double[ne];
-   for(int ii=0;ii<ne;ii++){
-       difd[ii] = d[ii]-mud; 
-   }
-   num = mu_num_den(UPsidXe_a,difd,ne,difd);
-   SigmaSqrd = num[0]/ne;
-   //construct C
-   double C1[nc*nc];
-   double C2[nc*ne];
-   double C3[ne*nc];
-   double C4[ne*ne];
-   double CKPsiXc_a[nc*nc]; 
-   double CKPsiXcXe_a[nc*ne]; 
-   double CKPsiXeXc_a[ne*nc]; 
-   double CKPsiXe_a[ne*ne]; 
-   double CKPsidXe_a[ne*ne];
-   vec2array(CKPsiXc,CKPsiXc_a);
-   vec2arrayNonSquare(CKPsiXcXe,CKPsiXcXe_a);
-   vec2arrayNonSquare(CKPsiXeXc,CKPsiXeXc_a);
-   vec2array(CKPsidXe,CKPsidXe_a);
-   vec2array(CKPsiXe,CKPsiXe_a);
-   for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc_a[ii];}
-   for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe_a[ii];}
-   for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc_a[ii];}
-   for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe_a[ii]+SigmaSqrd*CKPsidXe_a[ii];}
-   double C[(nc+ne)*(nc+ne)];
-   for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
-   int counter = 0;//The 1st quadrant upper left corner
-   int rowcounter = 0;
-   //Fill C with C1;
-   for(int ii=0;ii<nc*nc;ii++){
-       C[counter]=C1[ii];
-       counter++;
-       rowcounter++;
-       if (rowcounter ==nc){
-           counter += ne;
-           rowcounter=0;
-       }
-   }
-   //Fill C with C2
-   counter = (nc+ne)*nc;//The 2nd quadrant upper left corner
-   rowcounter = 0;
-   for(int ii=0;ii<ne*nc;ii++){
-       C[counter]=C2[ii];
-       counter++;
-       rowcounter++;
-       if(rowcounter==nc){
-           counter+=ne;
-           rowcounter=0;
-       }
-   }
-   //Fill C with C3
-   counter = nc;//The 3rd quadrant upper left corner
-   rowcounter = 0;
-   for(int ii=0;ii<ne*nc;ii++){
-       C[counter]=C3[ii];
-       counter++;
-       rowcounter++;
-       if(rowcounter==ne){
-           counter+=nc;
-           rowcounter=0;
-       }
-   }
-   //Fill C with C4
-   counter = (nc+ne)*nc+nc;//The 4th quadrant upper left corner
-   rowcounter = 0;
-   for(int ii=0;ii<ne*ne;ii++){
-       C[counter]=C4[ii];
-       counter++;
-       rowcounter++;
-       if(rowcounter==ne){
-           counter+=nc;
-           rowcounter=0;
-       }
-   }
-   //for(int ii=0;ii<ne*ne;ii++){C4[ii]=SigmaSqrd*CKPsidXe_a[ii];}
-   cout <<"\nC1\n"; Write1Darray(C1,nc,nc);
-   cout <<"\nC2\n"; Write1Darray(C2,ne,nc);
-   cout <<"\nC3\n"; Write1Darray(C3,nc,ne);
-   cout <<"\nC4\n"; Write1Darray(C4,ne,ne);
-   cout <<"\nC\n"; Write1Darray(C,ne+nc,ne+nc);
-   double UC[(ne+nc)*(ne+nc)];
-   for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
-   Cholesky(ne+nc,C,UC); 
-   cout <<"\nUC\n"; Write1Darray(UC,ne+nc,ne+nc);
-   double Y[nc+ne];
-   double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} 
-   for(int ii = 0;ii< nc;ii++){Y[ii] = Yc_a[ii];}
-   for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye_a[ii];}
-   cout <<"\nY\n"; Write1Darray(Y,ne+nc,1);
-   num = mu_num_den(UC,Y,ne+nc,oneNeNc);
-   //Begin testing here
-   cout <<"\nNUM\n"; Write1Darray(num,1,1);
-   den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
-   mu = num[0]/den[0];
-   cout << "\nmu\n" << mu;
-   
+    vec2array(Ye,Ye_a);
+    vec2array(UPsidXe,UPsidXe_a);
+    cout << "\n: UPsixe_a \n";
+    Write1Darray(UPsidXe_a,ne,ne);
+    
+    num = mu_num_den(UPsidXe_a,d,ne,oneNe);
+    den = mu_num_den(UPsidXe_a,oneNe,ne,oneNe);
+    cout << "\nnum: " << num[0];
+    cout << "\nden: " << den[0];
+    mud = num[0]/den[0]; 
+    for(int ii=0;ii<nc;ii++){
+        dif[ii] = Yc[ii]-muc; 
+    }
+    num = mu_num_den(UPsiXc_a,dif,nc,dif);
+    SigmaSqrc = num[0]/nc;
+    for(int ii=0;ii<ne;ii++){
+        difd[ii] = d[ii]-mud; 
+    }
+    num = mu_num_den(UPsidXe_a,difd,ne,difd);
+    SigmaSqrd = num[0]/ne;
+    //construct C
+    double C1[nc*nc];
+    double C2[nc*ne];
+    double C3[ne*nc];
+    double C4[ne*ne];
+    vec2array(CKPsiXc,CKPsiXc_a);
+    vec2arrayNonSquare(CKPsiXcXe,CKPsiXcXe_a);
+    vec2arrayNonSquare(CKPsiXeXc,CKPsiXeXc_a);
+    vec2array(CKPsidXe,CKPsidXe_a);
+    vec2array(CKPsiXe,CKPsiXe_a);
+    for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc_a[ii];}
+    for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe_a[ii];}
+    for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc_a[ii];}
+    for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe_a[ii]+SigmaSqrd*CKPsidXe_a[ii];}
+    for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
+    int counter = 0;//The 1st quadrant upper left corner
+    int rowcounter = 0;
+    //Fill C with C1;
+    for(int ii=0;ii<nc*nc;ii++){
+        C[counter]=C1[ii];
+        counter++;
+        rowcounter++;
+        if (rowcounter ==nc){
+            counter += ne;
+            rowcounter=0;
+        }
+    }
+    //Fill C with C2
+    counter = (nc+ne)*nc;//The 2nd quadrant upper left corner
+    rowcounter = 0;
+    for(int ii=0;ii<ne*nc;ii++){
+        C[counter]=C2[ii];
+        counter++;
+        rowcounter++;
+        if(rowcounter==nc){
+            counter+=ne;
+            rowcounter=0;
+        }
+    }
+    //Fill C with C3
+    counter = nc;//The 3rd quadrant upper left corner
+    rowcounter = 0;
+    for(int ii=0;ii<ne*nc;ii++){
+        C[counter]=C3[ii];
+        counter++;
+        rowcounter++;
+        if(rowcounter==ne){
+            counter+=nc;
+            rowcounter=0;
+        }
+    }
+    //Fill C with C4
+    counter = (nc+ne)*nc+nc;//The 4th quadrant upper left corner
+    rowcounter = 0;
+    for(int ii=0;ii<ne*ne;ii++){
+        C[counter]=C4[ii];
+        counter++;
+        rowcounter++;
+        if(rowcounter==ne){
+            counter+=nc;
+            rowcounter=0;
+        }
+    }
+    //for(int ii=0;ii<ne*ne;ii++){C4[ii]=SigmaSqrd*CKPsidXe_a[ii];}
+    cout <<"\nC1\n"; Write1Darray(C1,nc,nc);
+    cout <<"\nC2\n"; Write1Darray(C2,ne,nc);
+    cout <<"\nC3\n"; Write1Darray(C3,nc,ne);
+    cout <<"\nC4\n"; Write1Darray(C4,ne,ne);
+    cout <<"\nC\n"; Write1Darray(C,ne+nc,ne+nc);
+    for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
+    Cholesky(ne+nc,C,UC); 
+    cout <<"\nUC\n"; Write1Darray(UC,ne+nc,ne+nc);
+    for(int ii = 0;ii< nc;ii++){Y[ii] = Yc_a[ii];}
+    for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye_a[ii];}
+    cout <<"\nY\n"; Write1Darray(Y,ne+nc,1);
+    num = mu_num_den(UC,Y,ne+nc,oneNeNc);
+    //Begin testing here
+    den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
+    mu = num[0]/den[0];
+    cout << "\nmu\n" << mu;
 }
 //************************************************
 double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
-   double* Solved;
-   
-   Solved = matrixLeftDivision(UPsiX,
-   matrixLeftDivision(transpose(UPsiX,n),Y,n,1),n,1);
-   
-   return  matrixMultiply(oneN,Solved,1,1,n);
+    // Used to simplify some of the matrix math used in solving for kriging 
+    // Inputs:
+    //     UPsiX is a matrix of size nxn, 
+    //     Y is a array of size nx1 or 1xn; since the array are column arrays the size doesn't matter for a 1 d vector. 
+    //     oneN is also an array of size nx1 or 1xn
+    // Returns:
+    //    array of 1x1 solving the matrix equation One*(UPsiX\(UPsiX\Y))
+    double* Solved;
+    
+    Solved = matrixLeftDivision(UPsiX,
+    matrixLeftDivision(transpose(UPsiX,n),Y,n,1),n,1);
+    
+    return  matrixMultiply(oneN,Solved,1,1,n);
 }
 //************************************************
 double* transpose(double arr[],int n){
