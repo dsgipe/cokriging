@@ -138,16 +138,11 @@ void cokriging::buildModel(){
     //Main function for developing the cokriging model
     //initialize cokriging variables
     double Y[nc+ne];
-    double UPsiXc_a[nc*nc]; 
-    double UPsidXe_a[ne*ne]; 
-    double CKPsiXc_a[nc*nc]; 
+    UPsiXc = new double[nc*nc];
     double CKPsiXcXe_a[nc*ne]; 
     double CKPsiXeXc_a[ne*nc]; 
-    double CKPsiXe_a[ne*ne]; 
-    double CKPsidXe_a[ne*ne];
     double C[(nc+ne)*(nc+ne)];
     double UC[(ne+nc)*(ne+nc)];
-    vector<int> one(ne+nc,1);
     int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     double* num; //Temporary variable
     double* den; //Temporary variable
@@ -162,13 +157,17 @@ void cokriging::buildModel(){
     double C3[ne*nc];
     double C4[ne*ne];
     //Build all the various Psi
-    CKPsiXc = buildPsi(nc,Xc,thetaC);
-    UPsiXc = chol(CKPsiXc);
-    CKPsiXe = buildPsi(ne,Xe,thetaC);
-    UPsiXe = chol(CKPsiXe);
-    CKPsidXe = buildPsi(ne,Xe,thetaD);
-    UPsidXe = chol(CKPsidXe);
+    CKPsiXc = ArraybuildPsi(nc,Xc,thetaC);
+    Cholesky(nc,CKPsiXc,UPsiXc); 
+    CKPsiXe = ArraybuildPsi(ne,Xe,thetaC);
+    UPsiXe = new double[ne*ne];
+    Cholesky(ne,CKPsiXe,UPsiXe); 
+    CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
+    UPsidXe = new double[ne*ne];
+    Cholesky(ne,CKPsidXe,UPsidXe); 
+    //STOPPED HERE 
     CKPsiXcXe.resize(nc,vector<double>(ne,0)); 
+    cout << "testing\n" ;Write1Darray(CKPsiXe,ne,ne);
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
              CKPsiXcXe[ii][jj] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
@@ -183,52 +182,38 @@ void cokriging::buildModel(){
     }
    
     //Compute kriging parameters.
-    //convert vector to array for lapack
-    // may actually convert all vectors to array from the beginning since I don't think I need them
-    
-    vec2array(UPsiXc,UPsiXc_a);
-    cout << "a:\n ";
-    Write1Darray(UPsiXc_a,nc,nc);
     
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
-    num = mu_num_den(UPsiXc_a,Yc ,nc,oneNc);
-    den = mu_num_den(UPsiXc_a,oneNc,nc,oneNc);
+    num = mu_num_den(UPsiXc,Yc ,nc,oneNc);
+    den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
     muc = num[0]/den[0];
     d = new double[nc];
     for(int ii = 0;ii<ne;ii++){
         d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
     } 
 
-    vec2array(UPsidXe,UPsidXe_a);
-    cout << "\n: UPsixe_a \n";
-    Write1Darray(UPsidXe_a,ne,ne);
     
-    num = mu_num_den(UPsidXe_a,d,ne,oneNe);
-    den = mu_num_den(UPsidXe_a,oneNe,ne,oneNe);
-    cout << "\nnum: " << num[0];
-    cout << "\nden: " << den[0];
+    num = mu_num_den(UPsidXe,d,ne,oneNe);
+    den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
     mud = num[0]/den[0]; 
     for(int ii=0;ii<nc;ii++){
         dif[ii] = Yc[ii]-muc; 
     }
-    num = mu_num_den(UPsiXc_a,dif,nc,dif);
+    num = mu_num_den(UPsiXc,dif,nc,dif);
     SigmaSqrc = num[0]/nc;
     for(int ii=0;ii<ne;ii++){
         difd[ii] = d[ii]-mud; 
     }
-    num = mu_num_den(UPsidXe_a,difd,ne,difd);
+    num = mu_num_den(UPsidXe,difd,ne,difd);
     SigmaSqrd = num[0]/ne;
     //construct C
-    vec2array(CKPsiXc,CKPsiXc_a);
     vec2arrayNonSquare(CKPsiXcXe,CKPsiXcXe_a);
     vec2arrayNonSquare(CKPsiXeXc,CKPsiXeXc_a);
-    vec2array(CKPsidXe,CKPsidXe_a);
-    vec2array(CKPsiXe,CKPsiXe_a);
-    for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc_a[ii];}
+    for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc[ii];}
     for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe_a[ii];}
     for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc_a[ii];}
-    for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe_a[ii]+SigmaSqrd*CKPsidXe_a[ii];}
+    for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe[ii]+SigmaSqrd*CKPsidXe[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
     int counter = 0;//The 1st quadrant upper left corner
     int rowcounter = 0;
@@ -278,18 +263,10 @@ void cokriging::buildModel(){
             rowcounter=0;
         }
     }
-    //for(int ii=0;ii<ne*ne;ii++){C4[ii]=SigmaSqrd*CKPsidXe_a[ii];}
-    cout <<"\nC1\n"; Write1Darray(C1,nc,nc);
-    cout <<"\nC2\n"; Write1Darray(C2,ne,nc);
-    cout <<"\nC3\n"; Write1Darray(C3,nc,ne);
-    cout <<"\nC4\n"; Write1Darray(C4,ne,ne);
-    cout <<"\nC\n"; Write1Darray(C,ne+nc,ne+nc);
     for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
     Cholesky(ne+nc,C,UC); 
-    cout <<"\nUC\n"; Write1Darray(UC,ne+nc,ne+nc);
     for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
     for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
-    cout <<"\nY\n"; Write1Darray(Y,ne+nc,1);
     num = mu_num_den(UC,Y,ne+nc,oneNeNc);
     //Begin testing here
     den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
@@ -364,6 +341,55 @@ vector<vector<double > > chol(vector<vector<double> > PsiC){
     return UPsiV; 
 }
 //************************************************
+double* ArraybuildPsi(int n,double* x,double* theta ){
+    //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
+    // this function using any private variables.
+    // However I should be able to make this more opject oriented, by converting the class to a kriging class
+    // instead of a cokriging, that cokriging calls when it creates a cokriging model. Since cokriging is mainly just a 
+    // series of kriging functions
+    double PsiX[n][n];//initilize to zeros
+    double CKPsiX[n][n];//initilize to zeros
+    int EyeN[n][n] ;
+    int counter=0;int b; //increment varables
+    double* CKPsixRtn = new double[n*n];
+    for(int ii = 0; ii<n;ii++){ 
+        for(int jj = 0; jj<n;jj++){
+            PsiX[ii][jj] = 0;
+            CKPsiX[ii][jj] = 0;
+            CKPsixRtn[counter]=0;
+            EyeN[ii][jj]=0;
+            counter++;
+        } 
+    } 
+    // set diagonal to 1;
+    for(int ii = 0; ii<n;ii++){EyeN[ii][ii] = 1;}
+    int p =2;
+    //solve for Psi Cheap
+    for(int ii = 0; ii<n;ii++){ 
+        for(int jj = ii+1; jj <n;jj++){
+            PsiX[ii][jj] = exp(-sum(x,x,theta,p,ii,jj));
+        }
+    }
+    float eps = 2.2204*pow(10,-16);
+    counter = 0;b = 0;
+    for(int ii = 0; ii<n;ii++){ 
+        for(int jj = 0; jj <n;jj++){
+            CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
+            CKPsixRtn[b+counter*n] = CKPsiX[ii][jj];
+            counter++;
+            if(counter == n){
+               counter =0;
+               b++;
+            }
+        }
+    }
+   return CKPsixRtn;
+}
+//************************************************
+
+
+
+//************************************************
 vector <vector <double> > buildPsi(int n,double x[],double theta[] ){
     //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
     // this function using any private variables.
@@ -404,22 +430,14 @@ void cokriging::write(){
     //cout << "\nThetaD: " ;for(int ii=0; ii<thetaD.size();ii++){ cout << thetaD[ii]<<" " ;}
     //cout << "\nThetaC: " ;for(int ii=0; ii<thetaC.size();ii++){ cout << thetaC[ii]<<" " ;}
     //cout << "\nRho: " << rho;//for(int ii=0; ii<rho.size();ii++){ cout << rho[ii]<<" " ;}
-    cout << "\nPsiXc: ";
-    WriteVec(CKPsiXc); 
-    cout << "\nUPsiXc: ";
-    WriteVec(UPsiXc); 
+    //cout << "\nPsiXc: ";
+   // cout << "\nUPsiXc: ";
     //cout << "\nPsiE: ";
-    //WriteVec(CKPsiXe); 
     //cout << "\nUPsiE: ";
-    //WriteVec(UPsiXe); 
     //cout << "\nPsiDE: ";
-    //WriteVec(CKPsidXe); 
     //cout << "\nUPsiDE: ";
-    //WriteVec(UPsidXe);
     //cout << "\nCKPsiXcXe: ";
-    //WriteVec(CKPsiXcXe);
     //cout << "\nCKPsiXeXc: ";
-    //WriteVec(CKPsiXeXc);
    cout << "\nmuc: "<< muc;
    cout << "\nnd: " ;for(int ii=0; ii<ne;ii++){ cout << d[ii]<<" " ;}
    cout << "\nmud: "<< mud;

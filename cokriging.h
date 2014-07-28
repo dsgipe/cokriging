@@ -29,15 +29,15 @@ private:
     double* thetaD;//
     double* thetaC;//
     double rho;
-    vector <vector <double> >CKPsiXc;
-    vector <vector <double> >UPsiXc;
-    vector <vector <double> >CKPsiXe;
-    vector <vector <double> >UPsiXe;
+    double* CKPsiXc;
+    double* UPsiXc;
+    double* CKPsiXe;
+    double* UPsiXe;
     vector <vector <double> >CKPsiXcXe;
     vector <vector <double> >CKPsiXeXc;
     vector <vector <double> >UPsiXcXe;
-    vector <vector <double> >CKPsidXe;
-    vector <vector <double> >UPsidXe;
+    double* CKPsidXe;
+    double* UPsidXe;
     double muc;
     double mud;
     double* d;
@@ -47,6 +47,7 @@ private:
 };
 // Other used functions
 vector <vector <double> > buildPsi(int n,double x[],double theta[] );
+double* ArraybuildPsi(int n,double* x,double* theta );
 double sum(double x1[],double x2[],double theta[],int p,int ii,int jj);
 vector<vector<double > > chol(vector<vector<double > > PsiC);
 double* transpose(double arr[],int n);
