@@ -107,8 +107,6 @@ double* vec2array(vector<double > Vec){
     return Array;
 }
 //************************************************
-
-
 vector <vector<double> > cokriging::VecInverse(vector<vector<double> > Vec){//currently unused
    //invert a square vector
    int m = Vec.size();
@@ -142,7 +140,7 @@ void cokriging::buildModel(){
     //initialize cokriging variables
     double Y[nc+ne];
     UPsiXc = new double[nc*nc];
-    double CKPsiXcXe_a[nc*ne]; 
+    CKPsiXcXe_a = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe_a[ii] =0;} //array of ones
     double CKPsiXeXc_a[ne*nc]; 
     double C[(nc+ne)*(nc+ne)];
     double UC[(ne+nc)*(ne+nc)];
@@ -170,13 +168,21 @@ void cokriging::buildModel(){
     Cholesky(ne,CKPsidXe,UPsidXe); 
     //STOPPED HERE 
     CKPsiXcXe.resize(nc,vector<double>(ne,0)); 
-    cout << "testing\n" ;Write1Darray(CKPsiXe,ne,ne);
+    int counter = 0;int b = 0;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
              CKPsiXcXe[ii][jj] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
+             CKPsiXcXe_a[b+counter*nc] = CKPsiXcXe[ii][jj];
+             counter++; 
+            if(counter == ne){
+               counter =0;
+               b++;
+            }
          }
     }
 
+    cout << "testing\n" ;Write1Darray(CKPsiXcXe_a,ne,nc);
+    WriteVec(CKPsiXcXe);
     CKPsiXeXc.resize(ne,vector<double>(nc,0)); 
     for (int ii = 0;ii<nc;ii++){ 
          for(int jj=0;jj<ne;jj++){
@@ -211,14 +217,13 @@ void cokriging::buildModel(){
     num = mu_num_den(UPsidXe,difd,ne,difd);
     SigmaSqrd = num[0]/ne;
     //construct C
-    vec2arrayNonSquare(CKPsiXcXe,CKPsiXcXe_a);
     vec2arrayNonSquare(CKPsiXeXc,CKPsiXeXc_a);
     for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc[ii];}
     for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe_a[ii];}
     for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc_a[ii];}
     for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe[ii]+SigmaSqrd*CKPsidXe[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
-    int counter = 0;//The 1st quadrant upper left corner
+    counter = 0;//The 1st quadrant upper left corner
     int rowcounter = 0;
     //Fill C with C1;
     for(int ii=0;ii<nc*nc;ii++){

@@ -33,6 +33,7 @@ private:
     double* UPsiXc;
     double* CKPsiXe;
     double* UPsiXe;
+    double* CKPsiXcXe_a;
     vector <vector <double> >CKPsiXcXe;
     vector <vector <double> >CKPsiXeXc;
     vector <vector <double> >UPsiXcXe;
