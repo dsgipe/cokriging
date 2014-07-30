@@ -45,6 +45,9 @@ void WriteVec(vector<vector<double> > V){
 //************************************************
 void Write1Darray(double A[],int m,int n){
     //prints out what is a matrix in row major format
+    //inputs:
+    //     Write A, in columns of m, and rows of n
+    //     outputs A to the  screen 
     int counter = 0;
     int b = 0;
     for(int ii = 0; ii < m;ii++){ 
