@@ -5,7 +5,6 @@
 //************************************************
 #include "cokriging.h"
 #include <iomanip>
-#include <vector>
 #include <iostream>
 #include <cmath>
 #include "lpkinterface.h"
@@ -33,16 +32,6 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     for(int ii = 0;ii < numofdim;ii++){thetaC[ii] = pow(10.0,InitthetaC[ii]); }   
 }
 //************************************************
-void WriteVec(vector<vector<double> > V){
-    //Print out variables, currently used for debugging
-    for(int ii=0;ii<V.size();ii++){
-        cout << endl;
-        for(int jj = 0;jj<V[ii].size();jj++){
-            cout << setiosflags(ios::fixed) << setprecision(4) << V[ii][jj] << "\t";
-         }
-    }
-}
-//************************************************
 void Write1Darray(double A[],int m,int n){
     //prints out what is a matrix in row major format
     //inputs:
@@ -65,63 +54,6 @@ void Write1Darray(double A[],int m,int n){
         }
     }
 }
-//************************************************
-void vec2array(vector<vector <double> > Vec,double Array[]){
-    //converts a vector to a 1d array
-    int counter  = 0;
-    for(int ii = 0; ii < Vec.size();ii++){
-        for(int jj=0;jj<Vec[ii].size();jj++){
-            Array[counter] = Vec[jj][ii];
-            counter++;
-        }
-     }
-
-}
-//************************************************
-void vec2arrayNonSquare(vector<vector <double> > Vec,double Array[]){
-    //converts a vector to a 1d array
-    int counter  = 0;
-    for(int ii = 0; ii < Vec[0].size();ii++){
-        for(int jj=0;jj<Vec.size();jj++){
-            Array[counter] = Vec[jj][ii];
-            counter++;
-        }
-     }
-
-}
-//************************************************
-void vec2array(vector<double > Vec,double Array[]){
-    //overloaded function takes a one -d vector to an array
-    for(int ii = 0; ii < Vec.size();ii++){
-        Array[ii] = Vec[ii];
-     }
-
-}
-//************************************************
-double* vec2array(vector<double > Vec){
-    //overloaded function takes a one -d vector to an array
-    double* Array = new double[Vec.size()];
-    for(int ii = 0; ii < Vec.size();ii++){
-        Array[ii] = Vec[ii];
-     }
-    return Array;
-}
-//************************************************
-vector <vector<double> > cokriging::VecInverse(vector<vector<double> > Vec){//currently unused
-   //invert a square vector
-   int m = Vec.size();
-   if(Vec[0].size()!=m)
-       cout << "Error inverse(vector): Vector is not square\n";
-   double A[m*m]; 
-   vec2array(Vec,A);
-   cout << "\nA Not Inverted \n";
-   Write1Darray(A,m,m);
-   inverse(A,m);
-   cout << "\nA inverse - i Hope \n";
-   Write1Darray(A,m,m);
-   return Vec;
-}
-//************************************************
 double sum(double x1[],double x2[],double theta[],int p,int ii,int jj){
      //sum a vector in a unique way used for constructing cokriging model
      double sumVal = 0;
@@ -140,8 +72,8 @@ void cokriging::buildModel(){
     //initialize cokriging variables
     double Y[nc+ne];
     UPsiXc = new double[nc*nc];
-    CKPsiXcXe_a = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe_a[ii] =0;} //array of ones
-    double CKPsiXeXc_a[ne*nc]; 
+    CKPsiXcXe = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe[ii] =0;} //array of ones
+    CKPsiXeXc = new double[ne*nc]; 
     double C[(nc+ne)*(nc+ne)];
     double UC[(ne+nc)*(ne+nc)];
     int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
@@ -166,30 +98,19 @@ void cokriging::buildModel(){
     CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
     UPsidXe = new double[ne*ne];
     Cholesky(ne,CKPsidXe,UPsidXe); 
-    //STOPPED HERE 
-    CKPsiXcXe.resize(nc,vector<double>(ne,0)); 
+    // fill yet another Psi variable
     int counter = 0;int b = 0;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
-             CKPsiXcXe[ii][jj] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
-             CKPsiXcXe_a[b+counter*nc] = CKPsiXcXe[ii][jj];
+             CKPsiXcXe[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
              counter++; 
-            if(counter == ne){
-               counter =0;
-               b++;
-            }
+             if(counter == ne){
+                counter =0;
+                b++;
+             }
          }
     }
-
-    cout << "testing\n" ;Write1Darray(CKPsiXcXe_a,ne,nc);
-    WriteVec(CKPsiXcXe);
-    CKPsiXeXc.resize(ne,vector<double>(nc,0)); 
-    for (int ii = 0;ii<nc;ii++){ 
-         for(int jj=0;jj<ne;jj++){
-             CKPsiXeXc[jj][ii] = CKPsiXcXe[ii][jj];
-         }
-    }
-   
+    CKPsiXeXc = transposeNoneSquare(CKPsiXcXe,nc,ne);
     //Compute kriging parameters.
     
     // solve the rest of the kriging model
@@ -202,7 +123,6 @@ void cokriging::buildModel(){
         d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
     } 
 
-    
     num = mu_num_den(UPsidXe,d,ne,oneNe);
     den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
     mud = num[0]/den[0]; 
@@ -217,10 +137,9 @@ void cokriging::buildModel(){
     num = mu_num_den(UPsidXe,difd,ne,difd);
     SigmaSqrd = num[0]/ne;
     //construct C
-    vec2arrayNonSquare(CKPsiXeXc,CKPsiXeXc_a);
     for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc[ii];}
-    for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe_a[ii];}
-    for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc_a[ii];}
+    for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe[ii];}
+    for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc[ii];}
     for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe[ii]+SigmaSqrd*CKPsidXe[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
     counter = 0;//The 1st quadrant upper left corner
@@ -298,6 +217,25 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     return  matrixMultiply(oneN,Solved,1,1,n);
 }
 //************************************************
+double* transposeNoneSquare(double arr[],int nc,int nr){
+    //transpose a row ordered array, arr,
+    //nc: number of columns
+    //nr: number of rows
+    int counter  = 0;
+    int b = 0;
+    double* tran_arr = new double[nc*nr];
+    for(int ii = 0; ii < nc*nr;ii++){
+        tran_arr[b+counter*nr] = arr[ii];
+        counter++;
+        if(counter == nc){
+           counter =0;
+           b++;
+        }
+    }
+    return tran_arr;
+
+}
+//************************************************
 double* transpose(double arr[],int n){
     //transpose a row ordered array
     int counter  = 0;
@@ -332,23 +270,6 @@ void Cholesky(int d,double*S,double*D){
        }
     }
 }
-//Vector to array cholesky wrapper
-//************************************************
-vector<vector<double > > chol(vector<vector<double> > PsiC){
-    //wrapper of cholesky used for vectors
-    int n = PsiC.size();
-    double PsiCarry[n*n];
-    double UPsiX[n*n];
-    //convert vector to array
-    int inc = 0;
-    for(int ii = 0;ii<n;ii++){for(int jj=0;jj<n;jj++){PsiCarry[inc] = PsiC[ii][jj];inc++;}}
-    vector<vector<double > > UPsiV = PsiC;//Initilize 
-    Cholesky(n,PsiCarry,UPsiX); 
-    inc = 0;
-    for(int ii = 0;ii<n;ii++){for(int jj=0;jj<n;jj++){UPsiV[jj][ii] = UPsiX[inc];inc++;}}
-    return UPsiV; 
-}
-//************************************************
 double* ArraybuildPsi(int n,double* x,double* theta ){
     //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
     // this function using any private variables.
@@ -392,37 +313,6 @@ double* ArraybuildPsi(int n,double* x,double* theta ){
         }
     }
    return CKPsixRtn;
-}
-//************************************************
-
-
-
-//************************************************
-vector <vector <double> > buildPsi(int n,double x[],double theta[] ){
-    //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
-    // this function using any private variables.
-    // However I should be able to make this more opject oriented, by converting the class to a kriging class
-    // instead of a cokriging, that cokriging calls when it creates a cokriging model. Since cokriging is mainly just a 
-    // series of kriging functions
-    vector<vector<double> > PsiX(n,vector<double>(n,0));//initilize to zeros
-    vector<vector<double> > CKPsiX(n,vector<double>(n,0));//initilize to zeros
-    int p =2;
-    //solve for Psi Cheap
-    for(int ii = 0; ii<n;ii++){ 
-        for(int jj = ii+1; jj <n;jj++){
-            PsiX[ii][jj] = exp(-sum(x,x,theta,p,ii,jj));
-        }
-    }
-    vector<vector<int> > EyeN(n,vector<int>(n,0)); for(int ii = 0; ii<n;ii++){EyeN[ii][ii] = 1;}
-    float eps = 2.2204*pow(10,-16);
-    for(int ii = 0; ii<n;ii++){ 
-        for(int jj = 0; jj <n;jj++){
-            CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
-        }
-    }
-   
-   return CKPsiX;
-
 }
 //************************************************
 void cokriging::write(){

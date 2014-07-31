@@ -6,6 +6,7 @@
 #include <vector>
 #include <sstream>
 #include "cokriging.h"
+#include "vector2array.h"
 using namespace std;
 //Reading method is temporary and will liekly be changed once 2d tests are run
 //Split string used in the other split

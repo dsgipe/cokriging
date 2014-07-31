@@ -1,5 +1,5 @@
 COMP = g++
-FILES = CK.cpp cokriging.h cokriging.cpp lpkinterface.h
+FILES = CK.cpp cokriging.h cokriging.cpp lpkinterface.h vector2array.h
 PATH2LAPACK = ../lapack-3.3.0 
 LAPK = -llapack -lblas
 FC = -lgfortran
