@@ -32,74 +32,47 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     for(int ii = 0;ii < numofdim;ii++){thetaC[ii] = pow(10.0,InitthetaC[ii]); }   
 }
 //************************************************
-void Write1Darray(double A[],int m,int n){
-    //prints out what is a matrix in row major format
-    //inputs:
-    //     Write A, in columns of m, and rows of n
-    //     outputs A to the  screen 
-    int counter = 0;
-    int b = 0;
-    for(int ii = 0; ii < m;ii++){ 
-        if(ii ==0){  cout << setw(9);}
-        for(int jj = 0; jj < n;jj++){ 
-            cout  << setiosflags(ios::fixed) << setprecision(2)<<  A[b+counter*n] ;
-            cout << setw(9);
-            //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
-            counter ++;
-            if(counter == m){
-               counter =0;
-               b++;
-               cout << endl;
-            }
-        }
-    }
-}
-double sum(double x1[],double x2[],double theta[],int p,int ii,int jj){
-     //sum a vector in a unique way used for constructing cokriging model
-     double sumVal = 0;
-         //following line is for 2d
-     //for(int kk = 0; kk < thetaC.size();kk++){
-         //sumVal+= pow(thetaC[kk]*abs(Xc[ii][kk]-Xc[jj][kk]),p);
-     //}
-     //this is for 1d
-    int kk = 0;
-    sumVal+= theta[kk]*pow(abs(x1[ii]-x2[jj]),p);
-    return sumVal;
-}
-//************************************************
 void cokriging::buildModel(){
     //Main function for developing the cokriging model
-    //initialize cokriging variables
+    //---------------------------------------------//
+    // initialize  and declare cokriging variables
+    //---------------------------------------------//
+    int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     double Y[nc+ne];
     UPsiXc = new double[nc*nc];
     CKPsiXcXe = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe[ii] =0;} //array of ones
     CKPsiXeXc = new double[ne*nc]; 
     double C[(nc+ne)*(nc+ne)];
     double UC[(ne+nc)*(ne+nc)];
-    int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
-    double* num; //Temporary variable
-    double* den; //Temporary variable
     double* oneNe = new double[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
     double* oneNc = new double[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
     double* dif = new double[nc];
     double* difd = new double[ne];
+    UPsidXe = new double[ne*ne];
+    UPsiXe = new double[ne*ne];
+    d = new double[nc];
     // used to contruct C
-    double C1[nc*nc];
-    double C2[nc*ne];
-    double C3[ne*nc];
-    double C4[ne*ne];
-    //Build all the various Psi
+    double C1[nc*nc];//quadrant 1
+    double C2[nc*ne];//quadrant 2
+    double C3[ne*nc];//quadrant 3
+    double C4[ne*ne];//quadrant 4
+    //Temporary variables
+    double* num;
+    double* den; 
+    //counters
+    int rowcounter = 0;
+    int counter = 0;
+    int b = 0;
+    //Build all the various Psi variables for cheap and expensive models
     CKPsiXc = ArraybuildPsi(nc,Xc,thetaC);
     Cholesky(nc,CKPsiXc,UPsiXc); 
     CKPsiXe = ArraybuildPsi(ne,Xe,thetaC);
-    UPsiXe = new double[ne*ne];
     Cholesky(ne,CKPsiXe,UPsiXe); 
     CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
-    UPsidXe = new double[ne*ne];
     Cholesky(ne,CKPsidXe,UPsidXe); 
     // fill yet another Psi variable
-    int counter = 0;int b = 0;
+    counter = 0;b = 0;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
              CKPsiXcXe[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
@@ -118,7 +91,6 @@ void cokriging::buildModel(){
     num = mu_num_den(UPsiXc,Yc ,nc,oneNc);
     den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
     muc = num[0]/den[0];
-    d = new double[nc];
     for(int ii = 0;ii<ne;ii++){
         d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
     } 
@@ -143,7 +115,7 @@ void cokriging::buildModel(){
     for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe[ii]+SigmaSqrd*CKPsidXe[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
     counter = 0;//The 1st quadrant upper left corner
-    int rowcounter = 0;
+    rowcounter = 0;
     //Fill C with C1;
     for(int ii=0;ii<nc*nc;ii++){
         C[counter]=C1[ii];
@@ -190,16 +162,52 @@ void cokriging::buildModel(){
             rowcounter=0;
         }
     }
+    //combine Ye and Yc into Y
     for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
     Cholesky(ne+nc,C,UC); 
     for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
     for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
     num = mu_num_den(UC,Y,ne+nc,oneNeNc);
-    //Begin testing here
     den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
     mu = num[0]/den[0];
     cout << "\nmu\n" << mu;
 }
+//************************************************
+void Write1Darray(double A[],int m,int n){
+    //prints out what is a matrix in row major format
+    //inputs:
+    //     Write A, in columns of m, and rows of n
+    //     outputs A to the  screen 
+    int counter = 0;
+    int b = 0;
+    for(int ii = 0; ii < m;ii++){ 
+        if(ii ==0){  cout << setw(9);}
+        for(int jj = 0; jj < n;jj++){ 
+            cout  << setiosflags(ios::fixed) << setprecision(2)<<  A[b+counter*n] ;
+            cout << setw(9);
+            //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
+            counter ++;
+            if(counter == m){
+               counter =0;
+               b++;
+               cout << endl;
+            }
+        }
+    }
+}
+double sum(double x1[],double x2[],double theta[],int p,int ii,int jj){
+     //sum a vector in a unique way used for constructing cokriging model
+     double sumVal = 0;
+         //following line is for 2d
+     //for(int kk = 0; kk < thetaC.size();kk++){
+         //sumVal+= pow(thetaC[kk]*abs(Xc[ii][kk]-Xc[jj][kk]),p);
+     //}
+     //this is for 1d
+    int kk = 0;
+    sumVal+= theta[kk]*pow(abs(x1[ii]-x2[jj]),p);
+    return sumVal;
+}
+
 //************************************************
 double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     // Used to simplify some of the matrix math used in solving for kriging 

@@ -1,8 +1,6 @@
 //********************************************
 // Specification file for cokriging class
 //********************************************
-
-
 using namespace std;
 class cokriging
 {
@@ -14,6 +12,7 @@ public:
              double InitthetaD[],double InitthetaC[],double Initrho,int Initnc,int Initne );
     //Print out results
     void write();
+    //Generate cokriging model
     void buildModel();
 private:
     double* Xe;//expensive independent var    
@@ -41,13 +40,12 @@ private:
     double SigmaSqrd;
     double mu;
 };
-// Other used functions
+// Other used functions kept seperate for information hiding from cokriging class
 double* ArraybuildPsi(int n,double* x,double* theta );
 double sum(double x1[],double x2[],double theta[],int p,int ii,int jj);
 double* transpose(double arr[],int n);
 double* transposeNoneSquare(double arr[],int nc, int nr);
 double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN);
-
 //Calculates the Cholesky of a matrix S of size dxd ex: (S[d*d])  and returns D
 void Cholesky(int d,double*S,double*D);
 
