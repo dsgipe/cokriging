@@ -15,6 +15,8 @@ public:
     //Generate cokriging model
     void buildModel();
 private:
+    //resize variables 
+    void resize();
     double* Xe;//expensive independent var    
     double* Ye;//expensive dependent var    
     double* Xc;//cheap independent var    
@@ -39,6 +41,7 @@ private:
     double SigmaSqrc;
     double SigmaSqrd;
     double mu;
+    double* UC;
 };
 // Other used functions kept seperate for information hiding from cokriging class
 double* ArraybuildPsi(int n,double* x,double* theta );
