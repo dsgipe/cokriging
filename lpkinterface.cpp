@@ -28,7 +28,20 @@ double* matrixLeftDivision(double* A, double* B, int N,int NRHS)
 }
 
 double* matrixMultiply(double* A, double* B,int M, int N,int K)
-{
+{   
+    
+    //---------------------------------------------//
+    // Multiple A by B
+    // Inputs: 
+    //    A: MxK matrix
+    //    B: N+K matrix
+    //    M: size of A
+    //    N: size of B
+    //    K: size shared by A and B
+    //  Returns:
+    //    C: MxN matrix
+    //---------------------------------------------//
+
     //Create temporary variables so the fortran code doesn't change
     //input variables
     double A_tmp[K*M];for(int ii =0;ii<K*M;ii++){A_tmp[ii]=A[ii];}

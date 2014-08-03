@@ -72,6 +72,14 @@ void ReadData(){
     cokriging CK(Xe_a,Ye_a,Xc_a,Yc_a,InitthetaD,InitthetaC,Initrho,nc,ne);
     cout <<"Begin building cokriging model" << endl;
     CK.buildModel();
+    int n=11;
+    double x[n];
+    double xi[1];
+    for(int ii=0;ii<n;ii++){
+        xi[0]=ii*0.1;
+        CK.predictor(xi,n);
+    }
+    
 //    CK.write(); 
     cout << endl;
 } 

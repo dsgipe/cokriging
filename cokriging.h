@@ -14,6 +14,7 @@ public:
     void write();
     //Generate cokriging model
     void buildModel();
+    void predictor(double* x,int n);
 private:
     //resize variables 
     void resize();
@@ -21,6 +22,7 @@ private:
     double* Ye;//expensive dependent var    
     double* Xc;//cheap independent var    
     double* Yc;//cheap dependent var   
+    double* Y;
     int ne;//expensive size 
     int nc;//cheap size
     double* thetaD;//
@@ -51,4 +53,6 @@ double* transposeNoneSquare(double arr[],int nc, int nr);
 double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN);
 //Calculates the Cholesky of a matrix S of size dxd ex: (S[d*d])  and returns D
 void Cholesky(int d,double*S,double*D);
-
+double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n);
+double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]);
+void Write1Darray(double A[],int m,int n);

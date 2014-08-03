@@ -56,6 +56,7 @@ void cokriging::resize(){
     UPsiXe = new double[ne*ne];
     d = new double[nc];
     UC = new double[(ne+nc)*(ne+nc)];
+    Y = new double[nc+ne];
 }
 //************************************************
 void cokriging::buildModel(){
@@ -72,7 +73,6 @@ void cokriging::buildModel(){
     //---------------------------------------------//
     // initialize  and declare local variables
     //---------------------------------------------//
-    double Y[nc+ne];
     double C[(nc+ne)*(nc+ne)];
     double* oneNe = new double[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
     double* oneNc = new double[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
@@ -222,6 +222,7 @@ void cokriging::buildModel(){
     Cholesky(ne+nc,C,UC); 
     for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
     for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
+    cout<<"\n\n\n\n\n:Y: ";Write1Darray(Y,ne+nc,1);
     num = mu_num_den(UC,Y,ne+nc,oneNeNc);
     den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
     mu = num[0]/den[0];
@@ -240,7 +241,7 @@ void Write1Darray(double A[],int m,int n){
     for(int ii = 0; ii < m;ii++){ 
         if(ii ==0){  cout << setw(9);}
         for(int jj = 0; jj < n;jj++){ 
-            cout  << setiosflags(ios::fixed) << setprecision(2)<<  A[b+counter*n] ;
+            cout  << setiosflags(ios::fixed) << setprecision(4)<<  A[b+counter*n] ;
             cout << setw(9);
             //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
             counter ++;
@@ -429,4 +430,62 @@ void cokriging::write(){
    cout << "\nSigmaSqrd: "<< SigmaSqrd;
 }
 //************************************************
+void cokriging::predictor(double* x,int n){
+    //---------------------------------------------//
+    // Evaluates the surface for a given independent
+    // variable.
+    // Inputs:
+    //    x - array, currently 1-d plan to develop n-d
+    //    n - size or array
+    // Outputs:
+    //    y - currently not returned, but will be the surrogate result
+    //---------------------------------------------//
+    double* cc  = new double[nc];
+    double* cd  = new double[ne];
+    double* cd1 = new double[ne];
+    double* cd2 = new double[ne];
+    double* c   = new double[nc+ne];
+    cc = c_pred(SigmaSqrc,rho,Xc,nc,x,n,thetaC);
+    cout<<"\n:cc: ";Write1Darray(cc,nc,1);
+    cd1 = c_pred(SigmaSqrc,rho*rho,Xe,ne,x,n,thetaC);
+    cout <<"thetac: " << thetaC[0]<< endl;
+    cout <<"thetad: " << thetaD[0]<< endl;
+    cout<<"\n:cd1: ";Write1Darray(cd1,ne,1);
+    cd2 = c_pred(SigmaSqrd,1,Xe,ne,x,n,thetaD);
+    cout<<"\n:cd2: ";Write1Darray(cd2,ne,1);
+    //combine cd1 and cd2
+    for(int ii=0;ii<ne;ii++){cd[ii]=cd1[ii]+cd2[ii];}
+    //concatinate cc and cd
+    for(int ii=0;ii<nc;ii++){c[ii]=cc[ii];}
+    for(int ii=0;ii<ne;ii++){c[ii+nc]=cd[ii];}
+    cout<<"\n:c: ";Write1Darray(c,ne+nc,1);
+    //solve the surrogate
+    double* diffY_mu = new double[ne+nc];
+    for(int ii=0;ii<ne+nc;ii++){diffY_mu[ii]=Y[ii]-mu;}
+    double* Yout = new double[1];
+    Yout =  matrixMultiply(c,matrixLeftDivision(UC,
+        matrixLeftDivision(transpose(UC,ne+nc),diffY_mu,ne+nc,1),ne+nc,1),1,1,nc+ne);
+    cout<<"\n:Yout: "<< Yout[0]+mu;
 
+    
+
+
+}
+//************************************************
+double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]){
+    int p =2;
+    double* c = new double[n2];
+    for(int ii=0;ii<n1;ii++){
+        //get sum value, different from previous usage.
+        c[ii]=rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii,n2));
+    }
+    return c;
+}
+//************************************************
+double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n){
+    double sumVal = 0;
+    for(int jj = 0;jj<n;jj++){
+        sumVal+=theta[0]*pow(abs(x1[ii]-x2[jj]),p);
+    }
+    return sumVal;
+}
