@@ -72,20 +72,26 @@ void ReadData(){
     cokriging CK(Xe_a,Ye_a,Xc_a,Yc_a,InitthetaD,InitthetaC,Initrho,nc,ne);
     cout <<"Begin building cokriging model" << endl;
     CK.buildModel();
+    cout <<"\nEnd building  model\n" << endl;
     int n=11;
     double x[n];
     double xi[1];
     for(int ii=0;ii<n;ii++){
         xi[0]=ii*0.1;
-        CK.predictor(xi,n);
+        CK.predictor(xi,1);
     }
-    
-//    CK.write(); 
+    cout <<"\nEnd prediction model\n" << endl;
     cout << endl;
+    delete [] Xe_a;
+    delete [] Ye_a;
+    delete [] Xc_a;
+    delete [] Yc_a;
+
 } 
 
 int main(){
     printf("Reading input.in\n");
     ReadData();
+    printf("Finished\n");
     return 0;
 }

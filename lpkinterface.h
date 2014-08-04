@@ -54,7 +54,7 @@ extern "C" {
 
 }
 //c calls
-void inverse(double* A, int N);
-double* matrixLeftDivision(double* A, double* B, int N,int NRHS);
-double* matrixMultiply(double* A, double* B,int M, int N,int K);
+void inverse(double A[], int N);
+double* matrixLeftDivision(double A[], double B[], int N,int NRHS);
+double* matrixMultiply(double A[], double B[],int M, int N,int K);
 

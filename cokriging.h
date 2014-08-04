@@ -15,6 +15,8 @@ public:
     //Generate cokriging model
     void buildModel();
     void predictor(double* x,int n);
+    //destructor
+    ~cokriging();
 private:
     //resize variables 
     void resize();

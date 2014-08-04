@@ -1,6 +1,6 @@
 #include "lpkinterface.h"
 
-void inverse(double* A, int N)
+void inverse(double A[], int N)
 {
     int *IPIV = new int[N+1];
     int LWORK = N*N;
@@ -13,21 +13,21 @@ void inverse(double* A, int N)
     delete IPIV;
     delete WORK;
 }
-double* matrixLeftDivision(double* A, double* B, int N,int NRHS)
+double* matrixLeftDivision(double A[], double B[], int N,int NRHS)
 {
     int *IPIV = new int[N+1];
     int INFO;
     //Create temporary variables so the fortran code doesn't change
     //input variables
     double A_tmp[N*N];for(int ii =0;ii<N*N;ii++){A_tmp[ii]=A[ii];}
-    double* B_rtn = new double[N];for(int ii =0;ii<N;ii++){B_rtn[ii]=B[ii];}
+    double* B_rtn= new double[N];for(int ii =0;ii<N;ii++){B_rtn[ii]=B[ii];}
 
     dgesv_(&N,&NRHS,A_tmp,&N,IPIV,B_rtn,&N,&INFO);
-    delete IPIV;
+    delete [] IPIV;
     return B_rtn;
 }
 
-double* matrixMultiply(double* A, double* B,int M, int N,int K)
+double* matrixMultiply(double A[], double B[],int M, int N,int K)
 {   
     
     //---------------------------------------------//

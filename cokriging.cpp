@@ -16,6 +16,32 @@ cokriging::cokriging(){
     //---------------------------------------------//
 }
 //************************************************
+cokriging::~cokriging(){
+    //---------------------------------------------//
+    //            destructor
+    //---------------------------------------------//
+    delete [] Xe;//expensive independent var    
+    delete [] Ye;//expensive dependent var    
+    delete [] Xc;//cheap independent var    
+    delete [] Yc;//cheap dependent var   
+    delete [] Y;
+    delete [] thetaD;//
+    delete [] thetaC;//
+    delete [] CKPsiXc;
+    delete [] UPsiXc;
+    delete [] CKPsiXe;
+    delete [] UPsiXe;
+    delete [] CKPsiXcXe;
+    delete [] CKPsiXeXc;
+    //delete [] UPsiXcXe;
+    delete [] CKPsidXe;
+    delete [] UPsidXe;
+    delete [] d;
+    delete [] UC;
+
+}
+
+//************************************************
 cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Inityc[],
     double InitthetaD[],double InitthetaC[],double Initrho,
     int Initnc, int Initne){
@@ -49,14 +75,14 @@ void cokriging::resize(){
     //     Change arrays to the correct size 
     //     based on number of data points
     //---------------------------------------------//
-    UPsiXc = new double[nc*nc];
-    CKPsiXcXe = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe[ii] =0;} //array of ones
-    CKPsiXeXc = new double[ne*nc]; 
-    UPsidXe = new double[ne*ne];
-    UPsiXe = new double[ne*ne];
-    d = new double[nc];
-    UC = new double[(ne+nc)*(ne+nc)];
-    Y = new double[nc+ne];
+    UPsiXc = new double[nc*nc]; for(int ii=0;ii<nc*nc;ii++){UPsiXc[ii] =0;} //initialize
+    CKPsiXcXe = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe[ii] =0;} //initialize
+    // for(int ii=0;ii<ne*nc;ii++){CKPsiXeXc[ii] =0;} //initialize ;///CKPsiXeXc //initilized elsewhere= new double[ne*nc]; 
+    UPsidXe = new double[ne*ne]; for(int ii=0;ii<ne*ne;ii++){UPsidXe[ii] =0;} //initialize
+    UPsiXe = new double[ne*ne]; for(int ii=0;ii<ne*ne;ii++){UPsiXe[ii] =0;} //initialize
+    d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
+    UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
+    Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
 }
 //************************************************
 void cokriging::buildModel(){
@@ -74,11 +100,11 @@ void cokriging::buildModel(){
     // initialize  and declare local variables
     //---------------------------------------------//
     double C[(nc+ne)*(nc+ne)];
-    double* oneNe = new double[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
-    double* oneNc = new double[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
+    double oneNe[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
+    double oneNc[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
-    double* dif = new double[nc];
-    double* difd = new double[ne];
+    double dif[nc];
+    double difd[ne];
     // used to contruct C
     double C1[nc*nc];//quadrant 1
     double C2[nc*ne];//quadrant 2
@@ -135,18 +161,22 @@ void cokriging::buildModel(){
         d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
     }  
     //cheap
+    delete [] num;
     num = mu_num_den(UPsidXe,d,ne,oneNe);
+    delete [] den;
     den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
     mud = num[0]/den[0]; 
     for(int ii=0;ii<nc;ii++){
         dif[ii] = Yc[ii]-muc; 
     }
     //difference
+    delete [] num;
     num = mu_num_den(UPsiXc,dif,nc,dif);
     SigmaSqrc = num[0]/nc;
     for(int ii=0;ii<ne;ii++){
         difd[ii] = d[ii]-mud; 
     }
+    delete [] num;
     num = mu_num_den(UPsidXe,difd,ne,difd);
     SigmaSqrd = num[0]/ne;
     //---------------------------------------------//
@@ -223,10 +253,14 @@ void cokriging::buildModel(){
     for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
     for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
     cout<<"\n\n\n\n\n:Y: ";Write1Darray(Y,ne+nc,1);
+    delete [] num;
     num = mu_num_den(UC,Y,ne+nc,oneNeNc);
+    delete [] den;
     den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
     mu = num[0]/den[0];
     cout << "\nmu\n" << mu;
+    delete [] num;
+    delete [] den;
 }
 //************************************************
 void Write1Darray(double A[],int m,int n){
@@ -279,13 +313,19 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     //     oneN is also an array of size nx1 or 1xn
     // Returns:
     //    array of 1x1 solving the matrix equation One*(UPsiX\(UPsiX\Y))
+    double * Trans;
+    Trans = transpose(UPsiX,n);
+    double * MLD1;
+    double * MLD2;
+    double * MLD3;
+    MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
+    MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
+    MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
+    delete [] Trans;
+    delete [] MLD1;    
+    delete [] MLD2;
     //---------------------------------------------//
-    double* Solved;
-    
-    Solved = matrixLeftDivision(UPsiX,
-    matrixLeftDivision(transpose(UPsiX,n),Y,n,1),n,1);
-    
-    return  matrixMultiply(oneN,Solved,1,1,n);
+    return MLD3;
 }
 //************************************************
 double* transposeNoneSquare(double arr[],int nc,int nr){
@@ -320,9 +360,9 @@ double* transpose(double arr[],int n){
     // Plan on removing function for the more
     // general none square version
     //---------------------------------------------//
+    double* tran_arr = new double[n*n];
     int counter  = 0;
     int b = 0;
-    double* tran_arr = new double[n*n];
     for(int ii = 0; ii < n*n;ii++){
         tran_arr[b+counter*n] = arr[ii];
         counter++;
@@ -440,41 +480,52 @@ void cokriging::predictor(double* x,int n){
     // Outputs:
     //    y - currently not returned, but will be the surrogate result
     //---------------------------------------------//
-    double* cc  = new double[nc];
-    double* cd  = new double[ne];
-    double* cd1 = new double[ne];
-    double* cd2 = new double[ne];
-    double* c   = new double[nc+ne];
+    double* cc ;
+    double* cd  = new double[ne];for(int ii=0;ii<ne;ii++){cd[ii]=0;}
+    double* cd1;
+    double* cd2;
+    double* c   = new double[nc+ne];for(int ii=0;ii<nc+ne;ii++){c[ii]=0;}
+    double* diffY_mu = new double[ne+nc];for(int ii=0;ii<nc+ne;ii++){diffY_mu[ii]=0;}
+    double* Yout;
     cc = c_pred(SigmaSqrc,rho,Xc,nc,x,n,thetaC);
-    cout<<"\n:cc: ";Write1Darray(cc,nc,1);
     cd1 = c_pred(SigmaSqrc,rho*rho,Xe,ne,x,n,thetaC);
-    cout <<"thetac: " << thetaC[0]<< endl;
-    cout <<"thetad: " << thetaD[0]<< endl;
-    cout<<"\n:cd1: ";Write1Darray(cd1,ne,1);
     cd2 = c_pred(SigmaSqrd,1,Xe,ne,x,n,thetaD);
-    cout<<"\n:cd2: ";Write1Darray(cd2,ne,1);
     //combine cd1 and cd2
     for(int ii=0;ii<ne;ii++){cd[ii]=cd1[ii]+cd2[ii];}
     //concatinate cc and cd
     for(int ii=0;ii<nc;ii++){c[ii]=cc[ii];}
     for(int ii=0;ii<ne;ii++){c[ii+nc]=cd[ii];}
-    cout<<"\n:c: ";Write1Darray(c,ne+nc,1);
     //solve the surrogate
-    double* diffY_mu = new double[ne+nc];
     for(int ii=0;ii<ne+nc;ii++){diffY_mu[ii]=Y[ii]-mu;}
-    double* Yout = new double[1];
-    Yout =  matrixMultiply(c,matrixLeftDivision(UC,
-        matrixLeftDivision(transpose(UC,ne+nc),diffY_mu,ne+nc,1),ne+nc,1),1,1,nc+ne);
+    double * Trans;
+    Trans =  transpose(UC,ne+nc);
+    double * MLD1;
+    MLD1 =  matrixLeftDivision(Trans,diffY_mu,ne+nc,1);
+    double * MLD2;
+    MLD2 = matrixLeftDivision(UC,MLD1 ,ne+nc,1);
+    Yout =  matrixMultiply(c,MLD2,1,1,nc+ne);
+    delete [] MLD1;
+    delete [] MLD2;
+    delete [] Trans;
     cout<<"\n:Yout: "<< Yout[0]+mu;
-
-    
-
-
+    delete [] cc;
+    delete [] cd;
+    delete [] c;
+    delete [] cd1;
+    delete [] cd2;
+    delete [] diffY_mu;
+    delete [] Yout;
+    //delete (cd ); 
+    //delete (cd1); 
+    //delete (cd2); 
+    //delete (c  ); 
+    //delete (diffY_mu);
+    //delete (UC_t);
 }
 //************************************************
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]){
     int p =2;
-    double* c = new double[n2];
+    double* c = new double[n1];
     for(int ii=0;ii<n1;ii++){
         //get sum value, different from previous usage.
         c[ii]=rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii,n2));
