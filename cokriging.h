@@ -2,6 +2,12 @@
 // Specification file for cokriging class
 //********************************************
 using namespace std;
+struct Array{
+    double * val;
+    int size;
+
+};
+
 class cokriging
 {
 public:
@@ -20,6 +26,7 @@ public:
 private:
     //resize variables 
     void resize();
+    struct Array Xe_a;
     double* Xe;//expensive independent var    
     double* Ye;//expensive dependent var    
     double* Xc;//cheap independent var    
@@ -58,3 +65,5 @@ void Cholesky(int d,double*S,double*D);
 double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n);
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]);
 void Write1Darray(double A[],int m,int n);
+
+

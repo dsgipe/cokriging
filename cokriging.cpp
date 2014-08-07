@@ -53,6 +53,8 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     // Higher fidelity - expensive parameters
     ne = Initne;
     Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
+    Xe_a.val = new double[ne]; for(int ii =0;ii<ne;ii++){Xe_a.val[ii] = Initxe[ii];}
+    Xe_a.size=ne;
     Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
     // Lower fidelity - cheap parameters
     nc = Initnc;
