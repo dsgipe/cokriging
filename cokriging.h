@@ -2,6 +2,18 @@
 // Specification file for cokriging class
 //********************************************
 using namespace std;
+class Arr{
+public:
+    Arr();
+    Arr(double* val, int m,int n);
+    ~Arr();
+    void print();
+    double * val;
+    int M;
+    int N;
+private:
+    int test;
+};
 struct Array{
     double * val;
     int size;
@@ -68,5 +80,5 @@ void Cholesky(int d,double*S,double*D);
 double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n);
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]);
 void Write1Darray(double A[],int m,int n);
-
+void Print(struct Array arr);
 

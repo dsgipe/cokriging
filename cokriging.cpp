@@ -103,6 +103,11 @@ void cokriging::buildModel(){
     //---------------------------------------------//
     //resize all arrays to fit the data set
     resize();
+    cout<<"\n\n\n\n\n:Xe: ";Write1Darray(Xe,ne,1);
+    int tmpI = 1;
+    Arr Xe_test(Xe,ne,tmpI);
+    cout << "======DEBUGGING======\n";
+    Xe_test.print();
     int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     //---------------------------------------------//
     // initialize  and declare local variables
@@ -548,3 +553,46 @@ double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n){
     }
     return sumVal;
 }
+void Print(struct Array arr){
+
+    for(int ii = 0; ii < arr.size;ii++){
+        cout << " " << arr.val[ii]; 
+    }
+    cout << endl;
+}
+Arr::Arr(){}
+Arr::Arr(double* valInit,int m, int n){
+    //constructor
+    val = new double[m*n];
+    for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];cout << "HI: " << valInit[ii];}
+    M = m;
+    N = n;
+}
+Arr::~Arr(){
+    delete [] val;
+}
+void Arr::print(){
+    //---------------------------------------------//
+    //prints out what is a matrix in row major format
+    //inputs:
+    //     Write A, in columns of m, and rows of n
+    //     outputs A to the  screen 
+    //---------------------------------------------//
+    int counter = 0;
+    int b = 0;
+    for(int ii = 0; ii < M;ii++){ 
+        if(ii ==0){  cout << setw(9);}
+        for(int jj = 0; jj < N;jj++){ 
+            cout  << setiosflags(ios::fixed) << setprecision(4)<<  val[b+counter*N] ;
+            cout << setw(9);
+            //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
+            counter ++;
+            if(counter == M){
+               counter =0;
+               b++;
+               cout << endl;
+            }
+        }
+    }
+}
+
