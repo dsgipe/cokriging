@@ -38,7 +38,6 @@ cokriging::~cokriging(){
     delete [] UPsidXe;
     delete [] d;
     delete [] UC;
-
 }
 
 //************************************************
@@ -53,17 +52,14 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     // Higher fidelity - expensive parameters
     ne = Initne;
     Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
-    Xe_a.val = new double[ne]; for(int ii =0;ii<ne;ii++){Xe_a.val[ii] = Initxe[ii];}
-    Xe_a.size=ne;
-    Ye_a.val = new double[ne]; for(int ii =0;ii<ne;ii++){Ye_a.val[ii] = Initye[ii];}
-    Ye_a.size=ne;
     Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
+    int one = 1;
+    Xe_a.Init(Initxe,ne,one);
+    Ye_a.Init(Initye,ne,one);
+    //Xc_a.Init(Initxc,nc,one);
+    //Yc_a.Init(Inityc,nc,one);
     // Lower fidelity - cheap parameters
     nc = Initnc;
-    Xc_a.val = new double[nc]; for(int ii =0;ii<nc;ii++){Xc_a.val[ii] = Initxc[ii];}
-    Xc_a.size=nc;
-    Yc_a.val = new double[nc]; for(int ii =0;ii<nc;ii++){Yc_a.val[ii] = Inityc[ii];}
-    Yc_a.size=nc;
     Xc = new double[nc]; for(int ii =0;ii<nc;ii++){Xc[ii] = Initxc[ii];}
     Yc = new double[nc]; for(int ii =0;ii<nc;ii++){Yc[ii] = Inityc[ii];}
     //linearality control variables
@@ -103,11 +99,9 @@ void cokriging::buildModel(){
     //---------------------------------------------//
     //resize all arrays to fit the data set
     resize();
-    cout<<"\n\n\n\n\n:Xe: ";Write1Darray(Xe,ne,1);
-    int tmpI = 1;
-    Arr Xe_test(Xe,ne,tmpI);
-    cout << "======DEBUGGING======\n";
-    Xe_test.print();
+    //int tmpI = 1;
+    //Arr Xe_test(Xe,ne,tmpI);
+    //Xe_test.print();
     int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     //---------------------------------------------//
     // initialize  and declare local variables
@@ -563,11 +557,19 @@ void Print(struct Array arr){
 Arr::Arr(){}
 Arr::Arr(double* valInit,int m, int n){
     //constructor
-    val = new double[m*n];
-    for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];cout << "HI: " << valInit[ii];}
     M = m;
     N = n;
+    //val = new double[m*n];
+    for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
 }
+void Arr::Init(double* valInit,int m, int n){
+    //constructor
+    M = m;
+    N = n;
+    val = new double[m*n];
+    for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
+}
+
 Arr::~Arr(){
     delete [] val;
 }

@@ -6,18 +6,16 @@ class Arr{
 public:
     Arr();
     Arr(double* val, int m,int n);
+    void Init(double* val, int m,int n);
     ~Arr();
     void print();
     double * val;
     int M;
     int N;
-private:
-    int test;
 };
 struct Array{
     double * val;
     int size;
-
 };
 
 class cokriging
@@ -38,10 +36,10 @@ public:
 private:
     //resize variables 
     void resize();
-    struct Array Xe_a;
-    struct Array Ye_a;
-    struct Array Xc_a;
-    struct Array Yc_a;
+    Arr Xe_a;
+    Arr Ye_a;
+    //Arr Xc_a;
+    //Arr Yc_a;
     double* Xe;//expensive independent var    
     double* Ye;//expensive dependent var    
     double* Xc;//cheap independent var    
