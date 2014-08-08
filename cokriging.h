@@ -27,6 +27,9 @@ private:
     //resize variables 
     void resize();
     struct Array Xe_a;
+    struct Array Ye_a;
+    struct Array Xc_a;
+    struct Array Yc_a;
     double* Xe;//expensive independent var    
     double* Ye;//expensive dependent var    
     double* Xc;//cheap independent var    

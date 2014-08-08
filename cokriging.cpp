@@ -55,9 +55,15 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
     Xe_a.val = new double[ne]; for(int ii =0;ii<ne;ii++){Xe_a.val[ii] = Initxe[ii];}
     Xe_a.size=ne;
+    Ye_a.val = new double[ne]; for(int ii =0;ii<ne;ii++){Ye_a.val[ii] = Initye[ii];}
+    Ye_a.size=ne;
     Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
     // Lower fidelity - cheap parameters
     nc = Initnc;
+    Xc_a.val = new double[nc]; for(int ii =0;ii<nc;ii++){Xc_a.val[ii] = Initxc[ii];}
+    Xc_a.size=nc;
+    Yc_a.val = new double[nc]; for(int ii =0;ii<nc;ii++){Yc_a.val[ii] = Inityc[ii];}
+    Yc_a.size=nc;
     Xc = new double[nc]; for(int ii =0;ii<nc;ii++){Xc[ii] = Initxc[ii];}
     Yc = new double[nc]; for(int ii =0;ii<nc;ii++){Yc[ii] = Inityc[ii];}
     //linearality control variables
