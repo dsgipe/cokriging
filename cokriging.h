@@ -5,6 +5,7 @@ using namespace std;
 class Arr{
 public:
     Arr();
+    Arr(const Arr& obj);//copy constructor
     Arr(double* valInit, int m,int n);
     void Init(double* valInit, int m,int n);
     ~Arr();

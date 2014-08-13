@@ -619,6 +619,7 @@ void Print(struct Array arr){
 //       Arr class function descriptions
 //-----------------------------------------------
 Arr::Arr(){
+    //constructor
     M=1;
     N=1;
     val = NULL;
@@ -626,11 +627,17 @@ Arr::Arr(){
  }
 //************************************************
 Arr::Arr(double* valInit,int m, int n){
-    //constructor
     M = m;
     N = n;
     val = new double[m*n];
     for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
+}
+//************************************************
+Arr::Arr(const Arr& obj){
+    M = obj.M;
+    N = obj.N;
+    val = new double[M*N];
+    for(int ii = 0; ii < M*N;ii++){ val[ii] = obj.val[ii];}
 }
 //************************************************
 void Arr::Init(double* valInit,int m, int n){
