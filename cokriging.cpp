@@ -4,6 +4,7 @@
 //Currently used for 1-D cokriging
 //************************************************
 #include "cokriging.h"
+#include "cstddef"//for null
 #include <iomanip>
 #include <iostream>
 #include <cmath>
@@ -53,13 +54,12 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     ne = Initne;
     Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
     Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
-    int one = 1;
-    Xe_a.Init(Initxe,ne,one);
-    Ye_a.Init(Initye,ne,one);
-    //Xc_a.Init(Initxc,nc,one);
-    //Yc_a.Init(Inityc,nc,one);
+    Xe_a.Init(Initxe,ne,1);
+    Ye_a.Init(Initye,ne,1);
     // Lower fidelity - cheap parameters
     nc = Initnc;
+    Xc_a.Init(Initxc,nc,1);
+    Yc_a.Init(Inityc,nc,1);
     Xc = new double[nc]; for(int ii =0;ii<nc;ii++){Xc[ii] = Initxc[ii];}
     Yc = new double[nc]; for(int ii =0;ii<nc;ii++){Yc[ii] = Inityc[ii];}
     //linearality control variables
@@ -79,6 +79,25 @@ void cokriging::resize(){
     //     Change arrays to the correct size 
     //     based on number of data points
     //---------------------------------------------//
+    //Array class initialization
+    double *ncnc_zero= new double[nc*nc];
+    for(int ii=0;ii<nc*nc;ii++){ncnc_zero[ii] =0;} //initialize
+    double *ncne_zero = new double[nc*ne];  
+    for(int ii=0;ii<nc*ne;ii++){ncne_zero[ii] =0;} //initialize
+    double *nene_zero = new double[ne*ne];  
+    for(int ii=0;ii<ne*ne;ii++){nene_zero[ii] =0;} //initialize
+    UPsiXc_a.Init(ncnc_zero,nc,nc);
+    CKPsiXcXe_a.Init(ncne_zero,nc,ne);
+    CKPsiXeXc_a.Init(ncne_zero,ne,nc);
+    UPsidXe_a.Init(nene_zero,ne,ne); 
+    UPsiXe_a.Init(nene_zero,ne,ne);
+    CKPsiXc_a.Init(ncnc_zero,nc,nc) ;
+    CKPsiXe_a.Init(nene_zero,ne,ne) ;
+    CKPsidXe_a.Init(nene_zero,ne,ne);
+    delete [] ncnc_zero;
+    delete [] ncne_zero;  
+    delete [] nene_zero;  
+    // old array stle initialization
     UPsiXc = new double[nc*nc]; for(int ii=0;ii<nc*nc;ii++){UPsiXc[ii] =0;} //initialize
     CKPsiXcXe = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe[ii] =0;} //initialize
     // for(int ii=0;ii<ne*nc;ii++){CKPsiXeXc[ii] =0;} //initialize ;///CKPsiXeXc //initilized elsewhere= new double[ne*nc]; 
@@ -87,6 +106,9 @@ void cokriging::resize(){
     d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
     UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
     Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
+    d_a.Init(d,nc,1);
+    UC_a.Init(UC,ne+nc,ne+nc);
+    Y_a.Init(Y,ne+nc,1);
 }
 //************************************************
 void cokriging::buildModel(){
@@ -99,9 +121,6 @@ void cokriging::buildModel(){
     //---------------------------------------------//
     //resize all arrays to fit the data set
     resize();
-    //int tmpI = 1;
-    //Arr Xe_test(Xe,ne,tmpI);
-    //Xe_test.print();
     int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
     //---------------------------------------------//
     // initialize  and declare local variables
@@ -128,6 +147,7 @@ void cokriging::buildModel(){
     // Build all the various Psi 
     // variables for cheap and expensive models
     //---------------------------------------------//
+    buildPsi(Xc_a,thetaC);
     CKPsiXc  = ArraybuildPsi(nc,Xc,thetaC);
     CKPsiXe  = ArraybuildPsi(ne,Xe,thetaC);
     CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
@@ -400,6 +420,64 @@ void Cholesky(int d,double*S,double*D){
        }
     }
 }
+void buildPsi(Arr x, double* theta ){
+    //---------------------------------------------//
+    // Inputs: 
+    //    x: expected to be a one dimensional 
+    //        square row array
+    //    theta: only tested for one dimension, but 
+    //        hopefully be changed in the future
+    // Outputs: 
+    //    CKPsixRTN: an square row based 1 d array 
+    //         size (array.M*array.M)
+    //---------------------------------------------//
+    // NOTES:
+    // solve for psi, not apart of the cokriging 
+    // class due to information hiding, I don't want 
+    // this function modifying any private variables.
+    // However I should be able to make this more 
+    // opject oriented, by converting the class to a
+    // kriging class instead of a cokriging, that 
+    // cokriging calls when it creates a cokriging model.
+    // Since cokriging is mainly just a 
+    // series of kriging functions
+    //---------------------------------------------//
+    //int n = x.M;
+    //double PsiX[n][n];//initilize to zeros
+    //double CKPsiX[n][n];//initilize to zeros
+    //int EyeN[n][n] ;
+    //int counter=0;int b; //increment varables
+    //for(int ii = 0; ii<n;ii++){ 
+    //    for(int jj = 0; jj<n;jj++){
+    //        PsiX[ii][jj] = 0;
+    //        CKPsiX[ii][jj] = 0;
+    //        EyeN[ii][jj]=0;
+    //        counter++;
+    //    } 
+    //} 
+    //// set diagonal to 1;
+    //for(int ii = 0; ii<n;ii++){EyeN[ii][ii] = 1;}
+    //int p =2;
+    ////solve for Psi Cheap
+    //for(int ii = 0; ii<n;ii++){ 
+    //    for(int jj = ii+1; jj <n;jj++){
+    //        PsiX[ii][jj] = exp(-sum(x.val,x.val,theta,p,ii,jj));
+    //    }
+    //}
+    //float eps = 2.2204*pow(10,-16);
+    //counter = 0;b = 0;
+    //for(int ii = 0; ii<n;ii++){ 
+    //    for(int jj = 0; jj <n;jj++){
+    //        CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
+    //        CKPsixRtn.val[b+counter*n] = CKPsiX[ii][jj];
+    //        counter++;
+    //        if(counter == n){
+    //           counter =0;
+    //           b++;
+    //        }
+    //    }
+    //}
+}
 double* ArraybuildPsi(int n,double* x,double* theta ){
     //---------------------------------------------//
     //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
@@ -453,23 +531,6 @@ void cokriging::write(){
     // Print private variables to screen
     // Print input variables to screen   
     //---------------------------------------------//
-    //cout << "\nXc: " ;for(int ii=0; ii<nc;ii++){ cout << Xc[ii]<<" ";}
-    //cout << "\nXe: " ;for(int ii=0; ii<Xe.size();ii++){ cout << Xe[ii]<<" ";}
-    //cout << "\nYc: " ;for(int ii=0; ii<Yc.size();ii++){ cout << Yc[ii]<<" ";}
-    //cout << "\nYe: " ;for(int ii=0; ii<Ye.size();ii++){ cout << Ye[ii]<<" " ;}
-    //
-    //Print calculated variables to screen
-    //cout << "\nThetaD: " ;for(int ii=0; ii<thetaD.size();ii++){ cout << thetaD[ii]<<" " ;}
-    //cout << "\nThetaC: " ;for(int ii=0; ii<thetaC.size();ii++){ cout << thetaC[ii]<<" " ;}
-    //cout << "\nRho: " << rho;//for(int ii=0; ii<rho.size();ii++){ cout << rho[ii]<<" " ;}
-    //cout << "\nPsiXc: ";
-   // cout << "\nUPsiXc: ";
-    //cout << "\nPsiE: ";
-    //cout << "\nUPsiE: ";
-    //cout << "\nPsiDE: ";
-    //cout << "\nUPsiDE: ";
-    //cout << "\nCKPsiXcXe: ";
-    //cout << "\nCKPsiXeXc: ";
    cout << "\nmuc: "<< muc;
    cout << "\nnd: " ;for(int ii=0; ii<ne;ii++){ cout << d[ii]<<" " ;}
    cout << "\nmud: "<< mud;
@@ -554,14 +615,24 @@ void Print(struct Array arr){
     }
     cout << endl;
 }
-Arr::Arr(){}
+//------------------------------------------------
+//       Arr class function descriptions
+//-----------------------------------------------
+Arr::Arr(){
+    M=1;
+    N=1;
+    val = NULL;
+
+ }
+//************************************************
 Arr::Arr(double* valInit,int m, int n){
     //constructor
     M = m;
     N = n;
-    //val = new double[m*n];
+    val = new double[m*n];
     for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
 }
+//************************************************
 void Arr::Init(double* valInit,int m, int n){
     //constructor
     M = m;
@@ -569,10 +640,14 @@ void Arr::Init(double* valInit,int m, int n){
     val = new double[m*n];
     for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
 }
-
+//************************************************
 Arr::~Arr(){
-    delete [] val;
+    if (val !=NULL){
+       delete [] val;
+       val = NULL;
+    }
 }
+//************************************************
 void Arr::print(){
     //---------------------------------------------//
     //prints out what is a matrix in row major format

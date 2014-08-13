@@ -5,8 +5,8 @@ using namespace std;
 class Arr{
 public:
     Arr();
-    Arr(double* val, int m,int n);
-    void Init(double* val, int m,int n);
+    Arr(double* valInit, int m,int n);
+    void Init(double* valInit, int m,int n);
     ~Arr();
     void print();
     double * val;
@@ -38,8 +38,9 @@ private:
     void resize();
     Arr Xe_a;
     Arr Ye_a;
-    //Arr Xc_a;
-    //Arr Yc_a;
+    Arr Xc_a;
+    Arr Yc_a;
+    Arr Y_a;
     double* Xe;//expensive independent var    
     double* Ye;//expensive dependent var    
     double* Xc;//cheap independent var    
@@ -50,6 +51,17 @@ private:
     double* thetaD;//
     double* thetaC;//
     double rho;
+    //Kriging resulting variables using array class
+    Arr CKPsiXc_a;
+    Arr UPsiXc_a;
+    Arr CKPsiXe_a;
+    Arr UPsiXe_a;
+    Arr CKPsiXcXe_a;
+    Arr CKPsiXeXc_a;
+    Arr UPsiXcXe_a;
+    Arr CKPsidXe_a;
+    Arr UPsidXe_a;
+    //Kriging resulting variables
     double* CKPsiXc;
     double* UPsiXc;
     double* CKPsiXe;
@@ -66,6 +78,8 @@ private:
     double SigmaSqrd;
     double mu;
     double* UC;
+    Arr d_a;
+    Arr UC_a;
 };
 // Other used functions kept seperate for information hiding from cokriging class
 double* ArraybuildPsi(int n,double* x,double* theta );
@@ -79,4 +93,5 @@ double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n);
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]);
 void Write1Darray(double A[],int m,int n);
 void Print(struct Array arr);
-
+//Arr based routines
+void buildPsi(Arr x, double* theta);
