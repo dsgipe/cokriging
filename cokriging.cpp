@@ -40,7 +40,6 @@ cokriging::~cokriging(){
     delete [] d;
     delete [] UC;
 }
-
 //************************************************
 cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Inityc[],
     double InitthetaD[],double InitthetaC[],double Initrho,
@@ -74,7 +73,6 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
 }
 //************************************************
 void cokriging::resize(){
-
     //---------------------------------------------//
     //     Change arrays to the correct size 
     //     based on number of data points
@@ -147,7 +145,9 @@ void cokriging::buildModel(){
     // Build all the various Psi 
     // variables for cheap and expensive models
     //---------------------------------------------//
-    buildPsi(Xc_a,thetaC);
+    buildPsi(Xc_a,thetaC,CKPsiXc_a);
+    buildPsi(Xe_a,thetaC,CKPsiXe_a);
+buildPsi(Xe_a,thetaD,CKPsidXe_a);
     CKPsiXc  = ArraybuildPsi(nc,Xc,thetaC);
     CKPsiXe  = ArraybuildPsi(ne,Xe,thetaC);
     CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
@@ -420,7 +420,7 @@ void Cholesky(int d,double*S,double*D){
        }
     }
 }
-void buildPsi(Arr x, double* theta ){
+void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn ){
     //---------------------------------------------//
     // Inputs: 
     //    x: expected to be a one dimensional 
@@ -442,41 +442,43 @@ void buildPsi(Arr x, double* theta ){
     // Since cokriging is mainly just a 
     // series of kriging functions
     //---------------------------------------------//
-    //int n = x.M;
-    //double PsiX[n][n];//initilize to zeros
-    //double CKPsiX[n][n];//initilize to zeros
-    //int EyeN[n][n] ;
-    //int counter=0;int b; //increment varables
-    //for(int ii = 0; ii<n;ii++){ 
-    //    for(int jj = 0; jj<n;jj++){
-    //        PsiX[ii][jj] = 0;
-    //        CKPsiX[ii][jj] = 0;
-    //        EyeN[ii][jj]=0;
-    //        counter++;
-    //    } 
-    //} 
-    //// set diagonal to 1;
-    //for(int ii = 0; ii<n;ii++){EyeN[ii][ii] = 1;}
-    //int p =2;
-    ////solve for Psi Cheap
-    //for(int ii = 0; ii<n;ii++){ 
-    //    for(int jj = ii+1; jj <n;jj++){
-    //        PsiX[ii][jj] = exp(-sum(x.val,x.val,theta,p,ii,jj));
-    //    }
-    //}
-    //float eps = 2.2204*pow(10,-16);
-    //counter = 0;b = 0;
-    //for(int ii = 0; ii<n;ii++){ 
-    //    for(int jj = 0; jj <n;jj++){
-    //        CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
-    //        CKPsixRtn.val[b+counter*n] = CKPsiX[ii][jj];
-    //        counter++;
-    //        if(counter == n){
-    //           counter =0;
-    //           b++;
-    //        }
-    //    }
-    //}
+    int n = x.M;
+    CKPsixRtn.M = x.M;
+    CKPsixRtn.N = x.M;
+    double PsiX[n][n];//initilize to zeros
+    double CKPsiX[n][n];//initilize to zeros
+    int EyeN[n][n] ;
+    int counter=0;int b; //increment varables
+    for(int ii = 0; ii<n;ii++){ 
+        for(int jj = 0; jj<n;jj++){
+            PsiX[ii][jj] = 0;
+            CKPsiX[ii][jj] = 0;
+            EyeN[ii][jj]=0;
+            counter++;
+        } 
+    } 
+    // set diagonal to 1;
+    for(int ii = 0; ii<n;ii++){EyeN[ii][ii] = 1;}
+    int p =2;
+    //solve for Psi Cheap
+    for(int ii = 0; ii<n;ii++){ 
+        for(int jj = ii+1; jj <n;jj++){
+            PsiX[ii][jj] = exp(-sum(x.val,x.val,theta,p,ii,jj));
+        }
+    }
+    float eps = 2.2204*pow(10,-16);
+    counter = 0;b = 0;
+    for(int ii = 0; ii<n;ii++){ 
+        for(int jj = 0; jj <n;jj++){
+            CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
+            CKPsixRtn.val[b+counter*n] = CKPsiX[ii][jj];
+            counter++;
+            if(counter == n){
+               counter =0;
+               b++;
+            }
+        }
+    }
 }
 double* ArraybuildPsi(int n,double* x,double* theta ){
     //---------------------------------------------//

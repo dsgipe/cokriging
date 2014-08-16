@@ -95,4 +95,4 @@ double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2,
 void Write1Darray(double A[],int m,int n);
 void Print(struct Array arr);
 //Arr based routines
-void buildPsi(Arr x, double* theta);
+void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn);
