@@ -147,20 +147,26 @@ void cokriging::buildModel(){
     //---------------------------------------------//
     buildPsi(Xc_a,thetaC,CKPsiXc_a);
     buildPsi(Xe_a,thetaC,CKPsiXe_a);
-buildPsi(Xe_a,thetaD,CKPsidXe_a);
+    buildPsi(Xe_a,thetaD,CKPsidXe_a);
     CKPsiXc  = ArraybuildPsi(nc,Xc,thetaC);
     CKPsiXe  = ArraybuildPsi(ne,Xe,thetaC);
     CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
     //calculate cholesky, 
     //Cholesky(input square size,input square matrix,output square matrix); 
+    Cholesky_arr(CKPsiXe_a,UPsiXe_a); 
+    Cholesky_arr(CKPsiXc_a,UPsiXc_a); 
+    Cholesky_arr(CKPsidXe_a,UPsidXe_a); 
     Cholesky(ne,CKPsiXe,UPsiXe); 
     Cholesky(nc,CKPsiXc,UPsiXc); 
     Cholesky(ne,CKPsidXe,UPsidXe); 
     // fill yet another Psi variable but not square and different results
     counter = 0;b = 0;
+    CKPsiXcXe_a.M = nc;
+    CKPsiXcXe_a.N = ne;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
              CKPsiXcXe[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
+             CKPsiXcXe_a.val[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
              counter++; 
              if(counter == ne){
                 counter =0;
@@ -169,6 +175,7 @@ buildPsi(Xe_a,thetaD,CKPsidXe_a);
          }
     }
     CKPsiXeXc = transposeNoneSquare(CKPsiXcXe,nc,ne);
+    CKPsiXeXc_a = CKPsiXcXe_a.transpose();
     //Compute kriging parameters.
     
     // solve the rest of the kriging model
@@ -401,6 +408,27 @@ double* transpose(double arr[],int n){
     return tran_arr;
 }
 //************************************************
+void Cholesky_arr(const Arr& S,Arr& D){
+    //---------------------------------------------//
+    // Solve cholesky of a square array
+    // Inputs: 
+    //    S: input array
+    //    D: output array. Cholesky of input array. 
+    //---------------------------------------------//
+    int d = S.M;
+    D.M = S.M;D.N=S.N;
+    for(int k=0;k<d;++k){
+        double sum=0.;
+        for(int p=0;p<k;++p)sum+=D.val[k*d+p]*D.val[k*d+p];
+        D.val[k*d+k]=sqrt(S.val[k*d+k]-sum);
+        for(int i=k+1;i<d;++i){
+           double sum=0.;
+           for(int p=0;p<k;++p)sum+=D.val[i*d+p]*D.val[k*d+p];
+           D.val[i*d+k]=(S.val[i*d+k]-sum)/D.val[k*d+k];
+        }
+    }
+}
+//************************************************
 void Cholesky(int d,double*S,double*D){
     //---------------------------------------------//
     // Solve cholesky of an array
@@ -410,14 +438,14 @@ void Cholesky(int d,double*S,double*D){
     //    D: output array. Cholesky of input array. 
     //---------------------------------------------//
     for(int k=0;k<d;++k){
-       double sum=0.;
-       for(int p=0;p<k;++p)sum+=D[k*d+p]*D[k*d+p];
-       D[k*d+k]=sqrt(S[k*d+k]-sum);
-       for(int i=k+1;i<d;++i){
-          double sum=0.;
-          for(int p=0;p<k;++p)sum+=D[i*d+p]*D[k*d+p];
-          D[i*d+k]=(S[i*d+k]-sum)/D[k*d+k];
-       }
+        double sum=0.;
+        for(int p=0;p<k;++p)sum+=D[k*d+p]*D[k*d+p];
+        D[k*d+k]=sqrt(S[k*d+k]-sum);
+        for(int i=k+1;i<d;++i){
+           double sum=0.;
+           for(int p=0;p<k;++p)sum+=D[i*d+p]*D[k*d+p];
+           D[i*d+k]=(S[i*d+k]-sum)/D[k*d+k];
+        }
     }
 }
 void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn ){
@@ -649,6 +677,14 @@ void Arr::Init(double* valInit,int m, int n){
     val = new double[m*n];
     for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
 }
+void Arr::Init(int m, int n){
+    //constructor
+    M = m;
+    N = n;
+    val = new double[m*n];
+    for(int ii = 0; ii < M*N;ii++){ val[ii] = 0;}
+}
+
 //************************************************
 Arr::~Arr(){
     if (val !=NULL){
@@ -681,4 +717,37 @@ void Arr::print(){
         }
     }
 }
+//************************************************
+Arr Arr::transpose(){
+    //---------------------------------------------//
+    // Transpose a row ordered array, arr,
+    // Inputs:
+    //     arr: 1d array in column ordered format
+    //     nc:  number of columns
+    //     nr:  number of rows
+    // Returns:
+    //     transpose of arr
+    //---------------------------------------------//
+    Arr tran_arr;
+    int nc = M;
+    int nr = N;
+    tran_arr.Init(M,N);
+    int counter  = 0;
+    int b = 0;
+    for(int ii = 0; ii < nc*nr;ii++){
+        tran_arr.val[b+counter*nr] = val[ii];
+        counter++;
+        if(counter == nc){
+           counter =0;
+           b++;
+        }
+    }
+    return tran_arr;
 
+}
+Arr& Arr::operator=(const Arr& obj){
+    M = obj.M;
+    N = obj.N;
+    for(int ii = 0; ii < M*N;ii++){ val[ii] = obj.val[ii];}
+   
+}

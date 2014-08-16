@@ -8,11 +8,14 @@ public:
     Arr(const Arr& obj);//copy constructor
     Arr(double* valInit, int m,int n);
     void Init(double* valInit, int m,int n);
+    void Init(int m,int n);
+    Arr& operator=(const Arr& obj);
     ~Arr();
     void print();
     double * val;
     int M;
     int N;
+    Arr transpose();
 };
 struct Array{
     double * val;
@@ -96,3 +99,4 @@ void Write1Darray(double A[],int m,int n);
 void Print(struct Array arr);
 //Arr based routines
 void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn);
+void Cholesky_arr(const Arr& S,Arr& D);
