@@ -1,6 +1,7 @@
 //********************************************
 // Specification file for cokriging class
 //********************************************
+#include "lpkinterface.h"//Used for class Arr
 using namespace std;
 class Arr{
 public:
@@ -10,12 +11,14 @@ public:
     void Init(double* valInit, int m,int n);
     void Init(int m,int n);
     Arr& operator=(const Arr& obj);
+    Arr operator/(const Arr& obj);
     ~Arr();
     void print();
     double * val;
     int M;
     int N;
     Arr transpose();
+    Arr cholesky();
 };
 struct Array{
     double * val;

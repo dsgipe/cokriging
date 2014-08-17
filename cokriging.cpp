@@ -148,18 +148,18 @@ void cokriging::buildModel(){
     buildPsi(Xc_a,thetaC,CKPsiXc_a);
     buildPsi(Xe_a,thetaC,CKPsiXe_a);
     buildPsi(Xe_a,thetaD,CKPsidXe_a);
+    
     CKPsiXc  = ArraybuildPsi(nc,Xc,thetaC);
     CKPsiXe  = ArraybuildPsi(ne,Xe,thetaC);
     CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
     //calculate cholesky, 
-    //Cholesky(input square size,input square matrix,output square matrix); 
-    Cholesky_arr(CKPsiXe_a,UPsiXe_a); 
-    Cholesky_arr(CKPsiXc_a,UPsiXc_a); 
-    Cholesky_arr(CKPsidXe_a,UPsidXe_a); 
+    UPsiXe_a  = CKPsiXe_a.cholesky(); 
+    UPsiXc_a  = CKPsiXc_a.cholesky(); 
+    UPsidXe_a = CKPsidXe_a.cholesky(); 
     Cholesky(ne,CKPsiXe,UPsiXe); 
     Cholesky(nc,CKPsiXc,UPsiXc); 
     Cholesky(ne,CKPsidXe,UPsidXe); 
-    // fill yet another Psi variable but not square and different results
+    //fill yet another Psi variable but not square and different results
     counter = 0;b = 0;
     CKPsiXcXe_a.M = nc;
     CKPsiXcXe_a.N = ne;
@@ -352,6 +352,7 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     double * MLD1;
     double * MLD2;
     double * MLD3;
+ 
     MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
     MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
@@ -663,7 +664,7 @@ Arr::Arr(double* valInit,int m, int n){
     for(int ii = 0; ii < M*N;ii++){ val[ii] = valInit[ii];}
 }
 //************************************************
-Arr::Arr(const Arr& obj){
+Arr::Arr(const Arr& obj){//copy constuctor
     M = obj.M;
     N = obj.N;
     val = new double[M*N];
@@ -749,5 +750,50 @@ Arr& Arr::operator=(const Arr& obj){
     M = obj.M;
     N = obj.N;
     for(int ii = 0; ii < M*N;ii++){ val[ii] = obj.val[ii];}
-   
 }
+//************************************************
+Arr Arr::cholesky(){
+    //---------------------------------------------//
+    // Solve cholesky of a square array
+    // Inputs: 
+    //    S: input array
+    //    D: output array. Cholesky of input array. 
+    //---------------------------------------------//
+    Arr D;
+    D.Init(M,N);
+    int d = M;
+    D.M = M;D.N=N;
+    for(int k=0;k<d;++k){
+        double sum=0.;
+        for(int p=0;p<k;++p)sum+=D.val[k*d+p]*D.val[k*d+p];
+        D.val[k*d+k]=sqrt(val[k*d+k]-sum);
+        for(int i=k+1;i<d;++i){
+           double sum=0.;
+           for(int p=0;p<k;++p)sum+=D.val[i*d+p]*D.val[k*d+p];
+           D.val[i*d+k]=(val[i*d+k]-sum)/D.val[k*d+k];
+        }
+    }
+    return D;
+}
+//************************************************
+Arr Arr::operator/(const Arr& obj){
+    int NRHS = obj.N;
+    int NLHS = obj.M;
+    int *IPIV = new int[N+1];
+    int INFO;
+    //Create temporary variables so the fortran code doesn't change
+    //input variables
+    double A_tmp[M*N];for(int ii =0;ii<M*N;ii++){A_tmp[ii]=val[ii];}
+    double* B_rtn= new double[obj.N*obj.M];for(int ii =0;ii<obj.N*obj.M;ii++){B_rtn[ii]=obj.val[ii];}
+    cout <<"Inside / opperator\n";
+    cout <<"A_\n";
+    Write1Darray(A_tmp,M,N);
+    cout <<"B_rtn\n";
+    Write1Darray(B_rtn,obj.M,obj.N);
+    dgesv_(&NLHS,&NRHS,A_tmp,&NLHS,IPIV,B_rtn,&N,&INFO);
+    
+    delete [] B_rtn;
+    delete [] IPIV;
+    return Arr (B_rtn,obj.M,obj.N);
+}
+//************************************************
