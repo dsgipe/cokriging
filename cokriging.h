@@ -25,6 +25,10 @@ struct Array{
     int size;
 };
 
+Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN);
+void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn);
+void Cholesky_arr(const Arr& S,Arr& D);
+
 class cokriging
 {
 public:
@@ -101,5 +105,3 @@ double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2,
 void Write1Darray(double A[],int m,int n);
 void Print(struct Array arr);
 //Arr based routines
-void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn);
-void Cholesky_arr(const Arr& S,Arr& D);

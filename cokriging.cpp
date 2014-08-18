@@ -127,6 +127,8 @@ void cokriging::buildModel(){
     double oneNe[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
     double oneNc[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
+    Arr oneNe_a(oneNe,ne,1);
+    Arr oneNc_a(oneNc,nc,1);
     double dif[nc];
     double difd[ne];
     // used to contruct C
@@ -181,6 +183,8 @@ void cokriging::buildModel(){
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
     num = mu_num_den(UPsiXc,Yc ,nc,oneNc);
+    //Arr tmp = UPsiXc_a/Yc_a;
+    Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
     den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
     muc = num[0]/den[0];
     //---------------------------------------------//
@@ -352,7 +356,6 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     double * MLD1;
     double * MLD2;
     double * MLD3;
- 
     MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
     MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
@@ -362,6 +365,30 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     //---------------------------------------------//
     return MLD3;
 }
+//************************************************
+Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN){
+    //---------------------------------------------//
+    // Used to simplify some of the matrix math used in solving for kriging 
+    // Inputs:
+    //     UPsiX is a matrix of size nxn, 
+    //     Y is a array of size nx1 or 1xn; since the array are column arrays the size doesn't matter for a 1 d vector. 
+    //     oneN is also an array of size nx1 or 1xn
+    // Returns:
+    //    array of 1x1 solving the matrix equation One*(UPsiX\(UPsiX\Y))
+    //Arr MLD1_a;
+    //MLD1_a.Init(Y.M,Y.N);
+    //Solve vector algebra
+    Arr MLD1_a= UPsiX.transpose()/Y;
+   // cout << "TESTING\n";
+   // MLD1_a.print();
+    //MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
+    //MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
+    //MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
+    //---------------------------------------------//
+   // MLD1_a.print();
+    return MLD1_a;
+}
+
 //************************************************
 double* transposeNoneSquare(double arr[],int nc,int nr){
     //---------------------------------------------//
@@ -784,15 +811,9 @@ Arr Arr::operator/(const Arr& obj){
     //Create temporary variables so the fortran code doesn't change
     //input variables
     double A_tmp[M*N];for(int ii =0;ii<M*N;ii++){A_tmp[ii]=val[ii];}
-    double* B_rtn= new double[obj.N*obj.M];for(int ii =0;ii<obj.N*obj.M;ii++){B_rtn[ii]=obj.val[ii];}
-    cout <<"Inside / opperator\n";
-    cout <<"A_\n";
-    Write1Darray(A_tmp,M,N);
-    cout <<"B_rtn\n";
-    Write1Darray(B_rtn,obj.M,obj.N);
+    double B_rtn[obj.N*obj.M];for(int ii =0;ii<obj.N*obj.M;ii++){B_rtn[ii]=obj.val[ii];}
     dgesv_(&NLHS,&NRHS,A_tmp,&NLHS,IPIV,B_rtn,&N,&INFO);
     
-    delete [] B_rtn;
     delete [] IPIV;
     return Arr (B_rtn,obj.M,obj.N);
 }
