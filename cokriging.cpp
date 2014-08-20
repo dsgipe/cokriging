@@ -127,8 +127,8 @@ void cokriging::buildModel(){
     double oneNe[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
     double oneNc[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
-    Arr oneNe_a(oneNe,ne,1);
-    Arr oneNc_a(oneNc,nc,1);
+    Arr oneNe_a(oneNe,1,ne);
+    Arr oneNc_a(oneNc,1,nc);
     double dif[nc];
     double difd[ne];
     // used to contruct C
@@ -183,9 +183,11 @@ void cokriging::buildModel(){
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
     num = mu_num_den(UPsiXc,Yc ,nc,oneNc);
+    den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
     //Arr tmp = UPsiXc_a/Yc_a;
     Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
-    den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
+    Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
+    num_a.print("This is a test");
     muc = num[0]/den[0];
     //---------------------------------------------//
     //    calculate difference between points, 
@@ -358,7 +360,12 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     double * MLD3;
     MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
+    cout << "In Old\n";
+    Write1Darray(MLD2,n,1);
+    Write1Darray(oneN,n,1);
     MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
+    cout << "MLD3\n";
+    Write1Darray(MLD3,1,1);
     delete [] Trans;
     delete [] MLD1;    
     delete [] MLD2;
@@ -378,14 +385,12 @@ Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN){
     //Arr MLD1_a;
     //MLD1_a.Init(Y.M,Y.N);
     //Solve vector algebra
-    Arr MLD1_a= UPsiX.transpose()/Y;
-   // cout << "TESTING\n";
-   // MLD1_a.print();
+    Arr MLD1_a= oneN*(UPsiX/(UPsiX.transpose()/Y));
     //MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     //MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
     //MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
     //---------------------------------------------//
-   // MLD1_a.print();
+    MLD1_a.print("MLD1_a");
     return MLD1_a;
 }
 
@@ -721,6 +726,10 @@ Arr::~Arr(){
     }
 }
 //************************************************
+void Arr::print(const char * message){
+    cout << message << endl;
+    Arr::print();
+}
 void Arr::print(){
     //---------------------------------------------//
     //prints out what is a matrix in row major format
@@ -818,3 +827,40 @@ Arr Arr::operator/(const Arr& obj){
     return Arr (B_rtn,obj.M,obj.N);
 }
 //************************************************
+Arr Arr::operator*(const Arr& obj){
+    //---------------------------------------------//
+    // Multiple A by B
+    // Inputs: 
+    //    A: MxK matrix
+    //    B: K+N matrix
+    //    M: size of A
+    //    N: size of B
+    //    K: size shared by A and B
+    //  Returns:
+    //    C: MxN matrix
+    //---------------------------------------------//
+    int K = obj.N;
+    int N_input = obj.M;
+    int M_input = M;
+    if (obj.M!=N){
+        cout << "Likely problem with matrix, please check results\n";
+    }
+    //cout << "\n====================================================================\n";
+    //cout << "M " << M_input << " N " <<  N_input ;
+    //cout << " K " << K<< endl;
+    //cout << "M " << M << " N " <<  N << " obj.M " << obj.M << " obj.N " << obj.N;
+    //cout << "\n====================================================================\n";
+    //Create temporary variables so the fortran code doesn't change
+    //input variables
+    double A_tmp[K*M_input];for(int ii =0;ii<K*M_input;ii++){A_tmp[ii]=obj.val[ii];}
+    double B_tmp[K*N_input];for(int ii =0;ii<K*N_input;ii++){B_tmp[ii]=val[ii];}
+    double C_rtn[M_input*N_input];for(int ii =0;ii<<M_input*N_input;ii++){C_rtn[ii]=0;}
+    char transa = 'n';
+    char transb = 't';
+    double alpha =1;double beta = 0;
+    dgemm_(&transa, &transb, &M_input, &N_input, &K,&alpha,A_tmp,&M_input,B_tmp,&N_input,&beta,C_rtn, &K );
+ 
+    return Arr (C_rtn,M_input,N_input);
+}
+//************************************************
+

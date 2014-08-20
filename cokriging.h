@@ -5,15 +5,20 @@
 using namespace std;
 class Arr{
 public:
+    //constructors and destructors
     Arr();
     Arr(const Arr& obj);//copy constructor
     Arr(double* valInit, int m,int n);
+    //Initializers
     void Init(double* valInit, int m,int n);
     void Init(int m,int n);
+    //Operators
     Arr& operator=(const Arr& obj);
     Arr operator/(const Arr& obj);
+    Arr operator*(const Arr& obj);
     ~Arr();
     void print();
+    void print(const char * message);
     double * val;
     int M;
     int N;
