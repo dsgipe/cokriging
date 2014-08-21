@@ -128,7 +128,7 @@ void cokriging::buildModel(){
     double oneNc[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
     Arr oneNe_a(oneNe,1,ne);
-    Arr oneNc_a(oneNc,1,nc);
+    Arr oneNc_a(oneNc,nc,1);
     double dif[nc];
     double difd[ne];
     // used to contruct C
@@ -183,11 +183,10 @@ void cokriging::buildModel(){
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
     num = mu_num_den(UPsiXc,Yc ,nc,oneNc);
+    Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
     den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
     //Arr tmp = UPsiXc_a/Yc_a;
-    Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
-    num_a.print("This is a test");
     muc = num[0]/den[0];
     //---------------------------------------------//
     //    calculate difference between points, 
@@ -315,7 +314,7 @@ void Write1Darray(double A[],int m,int n){
     for(int ii = 0; ii < m;ii++){ 
         if(ii ==0){  cout << setw(9);}
         for(int jj = 0; jj < n;jj++){ 
-            cout  << setiosflags(ios::fixed) << setprecision(4)<<  A[b+counter*n] ;
+            cout  << setiosflags(ios::fixed) << setprecision(2)<<  A[b+counter*n] ;
             cout << setw(9);
             //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
             counter ++;
@@ -360,11 +359,8 @@ double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
     double * MLD3;
     MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
-    cout << "In Old\n";
-    Write1Darray(MLD2,n,1);
-    Write1Darray(oneN,n,1);
     MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
-    cout << "MLD3\n";
+    cout << "MLD3_old\n";
     Write1Darray(MLD3,1,1);
     delete [] Trans;
     delete [] MLD1;    
@@ -385,12 +381,13 @@ Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN){
     //Arr MLD1_a;
     //MLD1_a.Init(Y.M,Y.N);
     //Solve vector algebra
-    Arr MLD1_a= oneN*(UPsiX/(UPsiX.transpose()/Y));
+    Arr MLD2_a= (UPsiX/(UPsiX.transpose()/Y));
+    Arr MLD1_a = oneN*MLD2_a;
+    MLD1_a.print("MLD3_a");
     //MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     //MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
     //MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
     //---------------------------------------------//
-    MLD1_a.print("MLD1_a");
     return MLD1_a;
 }
 
@@ -742,7 +739,7 @@ void Arr::print(){
     for(int ii = 0; ii < M;ii++){ 
         if(ii ==0){  cout << setw(9);}
         for(int jj = 0; jj < N;jj++){ 
-            cout  << setiosflags(ios::fixed) << setprecision(4)<<  val[b+counter*N] ;
+            cout  << setiosflags(ios::fixed) << setprecision(2)<<  val[b+counter*N] ;
             cout << setw(9);
             //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
             counter ++;
@@ -839,25 +836,33 @@ Arr Arr::operator*(const Arr& obj){
     //  Returns:
     //    C: MxN matrix
     //---------------------------------------------//
-    int K = obj.N;
-    int N_input = obj.M;
-    int M_input = M;
+    int K = obj.M;
+    int N_input = obj.N;
+    int M_input = N;
     if (obj.M!=N){
         cout << "Likely problem with matrix, please check results\n";
     }
     //cout << "\n====================================================================\n";
-    //cout << "M " << M_input << " N " <<  N_input ;
-    //cout << " K " << K<< endl;
     //cout << "M " << M << " N " <<  N << " obj.M " << obj.M << " obj.N " << obj.N;
     //cout << "\n====================================================================\n";
     //Create temporary variables so the fortran code doesn't change
     //input variables
-    double A_tmp[K*M_input];for(int ii =0;ii<K*M_input;ii++){A_tmp[ii]=obj.val[ii];}
-    double B_tmp[K*N_input];for(int ii =0;ii<K*N_input;ii++){B_tmp[ii]=val[ii];}
+    //Arr tmpB(val,M,N);
+    //tmpB.print("other");
+    //Arr tmpA(obj.val,obj.M,obj.N);
+    //tmpA.print("obj");
+    double A_tmp[K*M_input];for(int ii =0;ii<K*M_input;ii++){A_tmp[ii]=val[ii];}
+    double B_tmp[K*N_input];for(int ii =0;ii<K*N_input;ii++){B_tmp[ii]=obj.val[ii];}
     double C_rtn[M_input*N_input];for(int ii =0;ii<<M_input*N_input;ii++){C_rtn[ii]=0;}
     char transa = 'n';
     char transb = 't';
     double alpha =1;double beta = 0;
+    cout << "In array inter\n"; 
+    cout << "\nIn lpk A:\n"; 
+    Write1Darray(A_tmp,K,M_input);
+    cout << "\nIn lpk B:\n"; 
+    Write1Darray(B_tmp,K,N_input);
+    cout << "M " << M_input << " N " <<  N_input << " K " << K<< endl;
     dgemm_(&transa, &transb, &M_input, &N_input, &K,&alpha,A_tmp,&M_input,B_tmp,&N_input,&beta,C_rtn, &K );
  
     return Arr (C_rtn,M_input,N_input);
