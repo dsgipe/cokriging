@@ -104,7 +104,7 @@ void cokriging::resize(){
     d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
     UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
     Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
-    d_a.Init(d,nc,1);
+    d_a.Init(d,1,nc);
     UC_a.Init(UC,ne+nc,ne+nc);
     Y_a.Init(Y,ne+nc,1);
 }
@@ -127,7 +127,7 @@ void cokriging::buildModel(){
     double oneNe[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
     double oneNc[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
-    Arr oneNe_a(oneNe,1,ne);
+    Arr oneNe_a(oneNe,ne,1);
     Arr oneNc_a(oneNc,nc,1);
     double dif[nc];
     double difd[ne];
@@ -202,6 +202,8 @@ void cokriging::buildModel(){
     //cheap
     delete [] num;
     num = mu_num_den(UPsidXe,d,ne,oneNe);
+    Arr D_a(d,1,nc);
+    Arr num_a2 = mu_num_den(UPsidXe_a,D_a,oneNe_a);
     delete [] den;
     den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
     mud = num[0]/den[0]; 
@@ -857,12 +859,12 @@ Arr Arr::operator*(const Arr& obj){
     char transa = 'n';
     char transb = 't';
     double alpha =1;double beta = 0;
-    cout << "In array inter\n"; 
-    cout << "\nIn lpk A:\n"; 
-    Write1Darray(A_tmp,K,M_input);
-    cout << "\nIn lpk B:\n"; 
-    Write1Darray(B_tmp,K,N_input);
-    cout << "M " << M_input << " N " <<  N_input << " K " << K<< endl;
+    //cout << "In array inter\n"; 
+    //cout << "\nIn lpk A:\n"; 
+    //Write1Darray(A_tmp,K,M_input);
+    //cout << "\nIn lpk B:\n"; 
+    //Write1Darray(B_tmp,K,N_input);
+    //cout << "M " << M_input << " N " <<  N_input << " K " << K<< endl;
     dgemm_(&transa, &transb, &M_input, &N_input, &K,&alpha,A_tmp,&M_input,B_tmp,&N_input,&beta,C_rtn, &K );
  
     return Arr (C_rtn,M_input,N_input);

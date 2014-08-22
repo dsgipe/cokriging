@@ -1,5 +1,7 @@
+#include <iostream>
+#include "cokriging.h"
 #include "lpkinterface.h"
-
+using namespace std;
 void inverse(double A[], int N)
 {
     int *IPIV = new int[N+1];
@@ -50,7 +52,12 @@ double* matrixMultiply(double A[], double B[],int M, int N,int K)
     char transa = 'n';
     char transb = 't';
     double alpha =1;double beta = 0;
-
+    cout << "\nIn lpk a:\n"; 
+    Write1Darray(A_tmp,K,M);
+    cout << "In lpk b:\n"; 
+    Write1Darray(B_tmp,K,N);
+    cout << "M " << M<< " N " <<  N<< " K " << K<< endl;
+    
     dgemm_(&transa, &transb, &M, &N, &K,&alpha,A_tmp,&M,B_tmp,&N,&beta,C_rtn, &K );
     return C_rtn;
 
