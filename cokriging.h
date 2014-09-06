@@ -14,8 +14,10 @@ public:
     void Init(int m,int n);
     //Operators
     Arr& operator=(const Arr& obj);
-    Arr operator/(const Arr& obj);
-    Arr operator*(const Arr& obj);
+    Arr operator/(const Arr& obj);//matrix divide
+    Arr operator*(const Arr& obj);//matrix multiply
+    Arr operator%(const Arr& obj);//divide each value
+    Arr operator%(const int intval);//divide each value
     ~Arr();
     void print();
     void print(const char * message);

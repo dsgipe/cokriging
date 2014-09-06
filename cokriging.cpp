@@ -188,6 +188,7 @@ void cokriging::buildModel(){
     //Arr tmp = UPsiXc_a/Yc_a;
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
     muc = num[0]/den[0];
+    Arr muc_a = num_a%den_a;
     //---------------------------------------------//
     //    calculate difference between points, 
     //---------------------------------------------//
@@ -202,15 +203,20 @@ void cokriging::buildModel(){
     //cheap
     delete [] num;
     num = mu_num_den(UPsidXe,d,ne,oneNe);
-    Arr D_a(d,1,nc);
-    Arr num_a2 = mu_num_den(UPsidXe_a,D_a,oneNe_a);
     delete [] den;
     den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
     mud = num[0]/den[0]; 
+    //New code
+    Arr D_a(d,ne,1);
+    num_a = mu_num_den(UPsidXe_a,D_a,oneNe_a);
+    den_a = mu_num_den(UPsidXe_a,oneNe_a,oneNe_a);
+    Arr mud_a = num_a%den_a;
+    //end new code
     for(int ii=0;ii<nc;ii++){
         dif[ii] = Yc[ii]-muc; 
     }
     //difference
+    cout << "============= \ndebugging \n=============\n";
     delete [] num;
     num = mu_num_den(UPsiXc,dif,nc,dif);
     SigmaSqrc = num[0]/nc;
@@ -220,6 +226,15 @@ void cokriging::buildModel(){
     delete [] num;
     num = mu_num_den(UPsidXe,difd,ne,difd);
     SigmaSqrd = num[0]/ne;
+    //new code
+    Arr dif_a(dif,nc,1);
+    num_a = mu_num_den(UPsiXc_a,dif_a,dif_a);
+    Arr SigmaSqrc_a = num_a%nc;
+    Arr difd_a(difd,ne,1);
+    num_a = mu_num_den(UPsidXe_a,difd_a,difd_a);
+    Arr SigmaSqrd_a = num_a%ne;
+    //end new code
+
     //---------------------------------------------//
     //                construct C
     //---------------------------------------------//
@@ -385,6 +400,8 @@ Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN){
     //Solve vector algebra
     Arr MLD2_a= (UPsiX/(UPsiX.transpose()/Y));
     Arr MLD1_a = oneN*MLD2_a;
+    oneN.print("one_n");
+    MLD2_a.print("MLD2_a");
     MLD1_a.print("MLD3_a");
     //MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
     //MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
@@ -826,6 +843,23 @@ Arr Arr::operator/(const Arr& obj){
     return Arr (B_rtn,obj.M,obj.N);
 }
 //************************************************
+Arr Arr::operator%(const Arr& obj){
+    double rtnArr[M*N]; 
+    if (M*N != obj.M*obj.N)
+        cout << "Size not compatible, results are likely wrong!\n";
+    for (int ii = 0; ii < M*N;ii++){
+        rtnArr[ii]=val[ii]/obj.val[ii];
+    }
+   return Arr (rtnArr,M,N); 
+}
+Arr Arr::operator%(const int intval){
+    double rtnArr[M*N]; 
+    for (int ii = 0; ii < M*N;ii++){
+        rtnArr[ii]=val[ii]/intval;
+    }
+   return Arr (rtnArr,M,N); 
+}
+//************************************************
 Arr Arr::operator*(const Arr& obj){
     //---------------------------------------------//
     // Multiple A by B
@@ -841,7 +875,7 @@ Arr Arr::operator*(const Arr& obj){
     int K = obj.M;
     int N_input = obj.N;
     int M_input = N;
-    if (obj.M!=N){
+    if (obj.M!=M){
         cout << "Likely problem with matrix, please check results\n";
     }
     //cout << "\n====================================================================\n";
