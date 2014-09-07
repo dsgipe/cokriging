@@ -104,7 +104,6 @@ void cokriging::resize(){
     d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
     UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
     Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
-    d_a.Init(d,1,nc);
     UC_a.Init(UC,ne+nc,ne+nc);
     Y_a.Init(Y,ne+nc,1);
 }
@@ -188,7 +187,8 @@ void cokriging::buildModel(){
     //Arr tmp = UPsiXc_a/Yc_a;
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
     muc = num[0]/den[0];
-    Arr muc_a = num_a%den_a;
+    muc_a.Init(1,1);
+    muc_a = num_a%den_a;
     //---------------------------------------------//
     //    calculate difference between points, 
     //---------------------------------------------//
@@ -210,7 +210,8 @@ void cokriging::buildModel(){
     d_a.Init(d,ne,1);
     num_a = mu_num_den(UPsidXe_a,d_a,oneNe_a);
     den_a = mu_num_den(UPsidXe_a,oneNe_a,oneNe_a);
-    Arr mud_a = num_a%den_a;
+    mud_a.Init(1,1);
+    mud_a = num_a%den_a;
     //end new code
     for(int ii=0;ii<nc;ii++){
         dif[ii] = Yc[ii]-muc; 
@@ -228,10 +229,12 @@ void cokriging::buildModel(){
     //new code
     Arr dif_a(dif,nc,1);
     num_a = mu_num_den(UPsiXc_a,dif_a,dif_a);
-    Arr SigmaSqrc_a = num_a%nc;
+    SigmaSqrc_a.Init(1,1); 
+    SigmaSqrc_a = num_a%nc;
     Arr difd_a(difd,ne,1);
     num_a = mu_num_den(UPsidXe_a,difd_a,difd_a);
-    Arr SigmaSqrd_a = num_a%ne;
+    SigmaSqrd_a.Init(1,1); 
+    SigmaSqrd_a = num_a%ne;
     //end new code
 
     cout << "============= \ndebugging \n=============\n";
