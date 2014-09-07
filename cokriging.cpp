@@ -207,8 +207,8 @@ void cokriging::buildModel(){
     den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
     mud = num[0]/den[0]; 
     //New code
-    Arr D_a(d,ne,1);
-    num_a = mu_num_den(UPsidXe_a,D_a,oneNe_a);
+    d_a.Init(d,ne,1);
+    num_a = mu_num_den(UPsidXe_a,d_a,oneNe_a);
     den_a = mu_num_den(UPsidXe_a,oneNe_a,oneNe_a);
     Arr mud_a = num_a%den_a;
     //end new code
@@ -216,7 +216,6 @@ void cokriging::buildModel(){
         dif[ii] = Yc[ii]-muc; 
     }
     //difference
-    cout << "============= \ndebugging \n=============\n";
     delete [] num;
     num = mu_num_den(UPsiXc,dif,nc,dif);
     SigmaSqrc = num[0]/nc;
@@ -235,6 +234,7 @@ void cokriging::buildModel(){
     Arr SigmaSqrd_a = num_a%ne;
     //end new code
 
+    cout << "============= \ndebugging \n=============\n";
     //---------------------------------------------//
     //                construct C
     //---------------------------------------------//
@@ -244,10 +244,10 @@ void cokriging::buildModel(){
     //  main mathematical difference between kriging
     //  and cokriging
     //---------------------------------------------//
-    for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc*CKPsiXc[ii];}
-    for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc*CKPsiXcXe[ii];}
-    for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc*CKPsiXeXc[ii];}
-    for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc*CKPsiXe[ii]+SigmaSqrd*CKPsidXe[ii];}
+    for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc_a.val[0]*CKPsiXc_a.val[ii];}
+    for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXcXe_a.val[ii];}
+    for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXeXc_a.val[ii];}
+    for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc_a.val[0]*CKPsiXe_a.val[ii]+SigmaSqrd_a.val[0]*CKPsidXe_a.val[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
     //The 1st quadrant upper left corner
     counter = 0;

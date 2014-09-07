@@ -98,6 +98,10 @@ private:
     double* UC;
     Arr d_a;
     Arr UC_a;
+    //Arr muc_a;
+    //Arr mud_a;
+    //Arr SigmaSqrc_a;
+    //Arr SigmaSqrd_a;
 };
 // Other used functions kept seperate for information hiding from cokriging class
 double* ArraybuildPsi(int n,double* x,double* theta );
