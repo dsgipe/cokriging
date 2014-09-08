@@ -187,7 +187,6 @@ void cokriging::buildModel(){
     //Arr tmp = UPsiXc_a/Yc_a;
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
     muc = num[0]/den[0];
-    muc_a.Init(1,1);
     muc_a = num_a%den_a;
     //---------------------------------------------//
     //    calculate difference between points, 
@@ -802,6 +801,9 @@ Arr Arr::transpose(){
 
 }
 Arr& Arr::operator=(const Arr& obj){
+    if (val ==NULL){
+        val = new double[M*N];
+    }
     M = obj.M;
     N = obj.N;
     for(int ii = 0; ii < M*N;ii++){ val[ii] = obj.val[ii];}
@@ -847,6 +849,9 @@ Arr Arr::operator/(const Arr& obj){
 }
 //************************************************
 Arr Arr::operator%(const Arr& obj){
+    //---------------------------------------------//
+    // divide every element
+    //---------------------------------------------//
     double rtnArr[M*N]; 
     if (M*N != obj.M*obj.N)
         cout << "Size not compatible, results are likely wrong!\n";
@@ -881,27 +886,12 @@ Arr Arr::operator*(const Arr& obj){
     if (obj.M!=M){
         cout << "Likely problem with matrix, please check results\n";
     }
-    //cout << "\n====================================================================\n";
-    //cout << "M " << M << " N " <<  N << " obj.M " << obj.M << " obj.N " << obj.N;
-    //cout << "\n====================================================================\n";
-    //Create temporary variables so the fortran code doesn't change
-    //input variables
-    //Arr tmpB(val,M,N);
-    //tmpB.print("other");
-    //Arr tmpA(obj.val,obj.M,obj.N);
-    //tmpA.print("obj");
     double A_tmp[K*M_input];for(int ii =0;ii<K*M_input;ii++){A_tmp[ii]=val[ii];}
     double B_tmp[K*N_input];for(int ii =0;ii<K*N_input;ii++){B_tmp[ii]=obj.val[ii];}
     double C_rtn[M_input*N_input];for(int ii =0;ii<<M_input*N_input;ii++){C_rtn[ii]=0;}
     char transa = 'n';
     char transb = 't';
     double alpha =1;double beta = 0;
-    //cout << "In array inter\n"; 
-    //cout << "\nIn lpk A:\n"; 
-    //Write1Darray(A_tmp,K,M_input);
-    //cout << "\nIn lpk B:\n"; 
-    //Write1Darray(B_tmp,K,N_input);
-    //cout << "M " << M_input << " N " <<  N_input << " K " << K<< endl;
     dgemm_(&transa, &transb, &M_input, &N_input, &K,&alpha,A_tmp,&M_input,B_tmp,&N_input,&beta,C_rtn, &K );
  
     return Arr (C_rtn,M_input,N_input);
