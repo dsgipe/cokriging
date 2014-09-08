@@ -860,10 +860,32 @@ Arr Arr::operator%(const Arr& obj){
     }
    return Arr (rtnArr,M,N); 
 }
+//************************************************
 Arr Arr::operator%(const int intval){
     double rtnArr[M*N]; 
     for (int ii = 0; ii < M*N;ii++){
         rtnArr[ii]=val[ii]/intval;
+    }
+   return Arr (rtnArr,M,N); 
+}
+//************************************************
+Arr Arr::operator,(const int intval){
+    double rtnArr[M*N]; 
+    for (int ii = 0; ii < M*N;ii++){
+        rtnArr[ii]=val[ii]*intval;
+    }
+   return Arr (rtnArr,M,N); 
+}
+//************************************************
+Arr Arr::operator,(const Arr& obj){
+    //---------------------------------------------//
+    // muliply every element
+    //---------------------------------------------//
+    double rtnArr[M*N]; 
+    if (M*N != obj.M*obj.N)
+        cout << "Size not compatible, results are likely wrong!\n";
+    for (int ii = 0; ii < M*N;ii++){
+        rtnArr[ii]=val[ii]*obj.val[ii];
     }
    return Arr (rtnArr,M,N); 
 }
