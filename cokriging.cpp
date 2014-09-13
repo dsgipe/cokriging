@@ -135,6 +135,10 @@ void cokriging::buildModel(){
     double C2[nc*ne];//quadrant 2
     double C3[ne*nc];//quadrant 3
     double C4[ne*ne];//quadrant 4
+    Arr C1_a;C1_a.Init(nc,nc);//quadrant 1
+    Arr C2_a;C2_a.Init(nc,ne);//quadrant 2
+    Arr C3_a;C3_a.Init(ne,nc);//quadrant 3
+    Arr C4_a;C4_a.Init(ne,ne);//quadrant 4
     //Temporary variables
     double* num;
     double* den; 
@@ -236,7 +240,6 @@ void cokriging::buildModel(){
     SigmaSqrd_a = num_a%ne;
     //end new code
 
-    cout << "============= \ndebugging \n=============\n";
     //---------------------------------------------//
     //                construct C
     //---------------------------------------------//
@@ -246,6 +249,11 @@ void cokriging::buildModel(){
     //  main mathematical difference between kriging
     //  and cokriging
     //---------------------------------------------//
+    C1_a = times(SigmaSqrc_a.val[0],CKPsiXc_a);//
+    cout << "============= \ndebugging \n=============\n";
+    C2_a = times(rho*SigmaSqrc_a.val[0],CKPsiXcXe_a);//
+    C3_a = times(rho*SigmaSqrc_a.val[0],CKPsiXeXc_a);//
+    //C4_a = times(rho*rho*SigmaSqrc_a.val[0],);//
     for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc_a.val[0]*CKPsiXc_a.val[ii];}
     for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXcXe_a.val[ii];}
     for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXeXc_a.val[ii];}
@@ -861,12 +869,20 @@ Arr Arr::operator%(const Arr& obj){
    return Arr (rtnArr,M,N); 
 }
 //************************************************
-Arr Arr::operator%(const int intval){
+Arr Arr::operator%(const double intval){
     double rtnArr[M*N]; 
     for (int ii = 0; ii < M*N;ii++){
         rtnArr[ii]=val[ii]/intval;
     }
    return Arr (rtnArr,M,N); 
+}
+//************************************************
+Arr times(const double intval, const Arr& obj){
+    double rtnArr[obj.M*obj.N]; 
+    for (int ii = 0; ii < obj.M*obj.N;ii++){
+        rtnArr[ii]=obj.val[ii]*intval;
+    }
+   return Arr (rtnArr,obj.M,obj.N); 
 }
 //************************************************
 Arr Arr::operator,(const int intval){

@@ -17,7 +17,9 @@ public:
     Arr operator/(const Arr& obj);//matrix divide
     Arr operator*(const Arr& obj);//matrix multiply
     Arr operator%(const Arr& obj);//divide each value
-    Arr operator%(const int intval);//divide each value
+    Arr operator%(const double intval);//divide each value
+    Arr operator,(const Arr& obj);  //multiple each value
+    Arr operator,(const int intval);//multiple each value
     ~Arr();
     void print();
     void print(const char * message);
@@ -27,6 +29,7 @@ public:
     Arr transpose();
     Arr cholesky();
 };
+Arr times(const double intval, const Arr& obj);
 struct Array{
     double * val;
     int size;
