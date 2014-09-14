@@ -959,4 +959,14 @@ Arr Arr::operator*(const Arr& obj){
     return Arr (C_rtn,M_input,N_input);
 }
 //************************************************
+double Arr::element(int i, int j){
+    //---------------------------------------------//
+    // inputs:
+    //    i: Row index
+    //    j: Column index
+    // Convert single array indexing to easy find 
+    // row and column info
+    //---------------------------------------------//
+    return val[j*N+i];
 
+}
