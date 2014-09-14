@@ -139,6 +139,7 @@ void cokriging::buildModel(){
     Arr C2_a;C2_a.Init(nc,ne);//quadrant 2
     Arr C3_a;C3_a.Init(ne,nc);//quadrant 3
     Arr C4_a;C4_a.Init(ne,ne);//quadrant 4
+    Arr C_a; C_a.Init(ne+nc,ne+nc);
     //Temporary variables
     double* num;
     double* den; 
@@ -250,15 +251,16 @@ void cokriging::buildModel(){
     //  and cokriging
     //---------------------------------------------//
     C1_a = times(SigmaSqrc_a.val[0],CKPsiXc_a);//
-    cout << "============= \ndebugging \n=============\n";
     C2_a = times(rho*SigmaSqrc_a.val[0],CKPsiXcXe_a);//
     C3_a = times(rho*SigmaSqrc_a.val[0],CKPsiXeXc_a);//
-    //C4_a = times(rho*rho*SigmaSqrc_a.val[0],);//
+    C4_a = times(rho*rho*SigmaSqrc_a.val[0],CKPsiXe_a)+times(SigmaSqrd_a.val[0],CKPsidXe_a);//
     for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc_a.val[0]*CKPsiXc_a.val[ii];}
     for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXcXe_a.val[ii];}
     for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXeXc_a.val[ii];}
     for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc_a.val[0]*CKPsiXe_a.val[ii]+SigmaSqrd_a.val[0]*CKPsidXe_a.val[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
+    
+    cout << "============= \ndebugging \n=============\n";
     //The 1st quadrant upper left corner
     counter = 0;
     rowcounter = 0;
@@ -876,6 +878,28 @@ Arr Arr::operator%(const double intval){
     }
    return Arr (rtnArr,M,N); 
 }
+//************************************************
+Arr Arr::operator+(const Arr& obj){
+    //---------------------------------------------//
+    // divide every element
+    //---------------------------------------------//
+    double rtnArr[M*N]; 
+    if (M*N != obj.M*obj.N)
+        cout << "Size not compatible, results are likely wrong!\n";
+    for (int ii = 0; ii < M*N;ii++){
+        rtnArr[ii]=val[ii]+obj.val[ii];
+    }
+   return Arr (rtnArr,M,N); 
+}
+//************************************************
+Arr Arr::operator+(const double intval){
+    double rtnArr[M*N]; 
+    for (int ii = 0; ii < M*N;ii++){
+        rtnArr[ii]=val[ii]+intval;
+    }
+   return Arr (rtnArr,M,N); 
+}
+
 //************************************************
 Arr times(const double intval, const Arr& obj){
     double rtnArr[obj.M*obj.N]; 

@@ -20,6 +20,8 @@ public:
     Arr operator%(const double intval);//divide each value
     Arr operator,(const Arr& obj);  //multiple each value
     Arr operator,(const int intval);//multiple each value
+    Arr operator+(const Arr& obj);  //multiple each value
+    Arr operator+(const double intval);//multiple each value
     ~Arr();
     void print();
     void print(const char * message);
