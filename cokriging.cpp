@@ -28,15 +28,7 @@ cokriging::~cokriging(){
     delete [] Y;
     delete [] thetaD;//
     delete [] thetaC;//
-    delete [] CKPsiXc;
-    delete [] UPsiXc;
-    delete [] CKPsiXe;
-    delete [] UPsiXe;
-    delete [] CKPsiXcXe;
-    delete [] CKPsiXeXc;
     //delete [] UPsiXcXe;
-    delete [] CKPsidXe;
-    delete [] UPsidXe;
     delete [] d;
     delete [] UC;
 }
@@ -96,11 +88,6 @@ void cokriging::resize(){
     delete [] ncne_zero;  
     delete [] nene_zero;  
     // old array stle initialization
-    UPsiXc = new double[nc*nc]; for(int ii=0;ii<nc*nc;ii++){UPsiXc[ii] =0;} //initialize
-    CKPsiXcXe = new double[nc*ne]; for(int ii=0;ii<ne*nc;ii++){CKPsiXcXe[ii] =0;} //initialize
-    // for(int ii=0;ii<ne*nc;ii++){CKPsiXeXc[ii] =0;} //initialize ;///CKPsiXeXc //initilized elsewhere= new double[ne*nc]; 
-    UPsidXe = new double[ne*ne]; for(int ii=0;ii<ne*ne;ii++){UPsidXe[ii] =0;} //initialize
-    UPsiXe = new double[ne*ne]; for(int ii=0;ii<ne*ne;ii++){UPsiXe[ii] =0;} //initialize
     d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
     UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
     Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
@@ -292,10 +279,9 @@ void cokriging::buildModel(){
     for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
     for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
     cout<<"\n\n\n\n\n:Y: ";Write1Darray(Y,ne+nc,1);
-    delete [] num;
-    num = mu_num_den(UC,Y,ne+nc,oneNeNc);
-    delete [] den;
-    den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
+    
+    double *num = mu_num_den(UC,Y,ne+nc,oneNeNc);
+    double *den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
     mu = num[0]/den[0];
     cout << "\nmu\n" << mu;
     delete [] num;
