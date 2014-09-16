@@ -78,7 +78,7 @@ void ReadData(){
     double xi[1];
     for(int ii=0;ii<n;ii++){
         xi[0]=ii*0.1;
-        CK.predictor(xi,1);
+//        CK.predictor(xi,1);
     }
     cout <<"\nEnd prediction model\n" << endl;
     cout << endl;

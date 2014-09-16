@@ -140,9 +140,6 @@ void cokriging::buildModel(){
     Arr C3_a;C3_a.Init(ne,nc);//quadrant 3
     Arr C4_a;C4_a.Init(ne,ne);//quadrant 4
     Arr C_a; C_a.Init(ne+nc,ne+nc);
-    //Temporary variables
-    double* num;
-    double* den; 
     //counters
     int rowcounter = 0;
     int counter = 0;
@@ -155,23 +152,16 @@ void cokriging::buildModel(){
     buildPsi(Xe_a,thetaC,CKPsiXe_a);
     buildPsi(Xe_a,thetaD,CKPsidXe_a);
     
-    CKPsiXc  = ArraybuildPsi(nc,Xc,thetaC);
-    CKPsiXe  = ArraybuildPsi(ne,Xe,thetaC);
-    CKPsidXe = ArraybuildPsi(ne,Xe,thetaD);
     //calculate cholesky, 
     UPsiXe_a  = CKPsiXe_a.cholesky(); 
     UPsiXc_a  = CKPsiXc_a.cholesky(); 
     UPsidXe_a = CKPsidXe_a.cholesky(); 
-    Cholesky(ne,CKPsiXe,UPsiXe); 
-    Cholesky(nc,CKPsiXc,UPsiXc); 
-    Cholesky(ne,CKPsidXe,UPsidXe); 
     //fill yet another Psi variable but not square and different results
     counter = 0;b = 0;
     CKPsiXcXe_a.M = nc;
     CKPsiXcXe_a.N = ne;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
-             CKPsiXcXe[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
              CKPsiXcXe_a.val[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
              counter++; 
              if(counter == ne){
@@ -180,18 +170,14 @@ void cokriging::buildModel(){
              }
          }
     }
-    CKPsiXeXc = transposeNoneSquare(CKPsiXcXe,nc,ne);
     CKPsiXeXc_a = CKPsiXcXe_a.transpose();
     //Compute kriging parameters.
     
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
-    num = mu_num_den(UPsiXc,Yc ,nc,oneNc);
     Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
-    den = mu_num_den(UPsiXc,oneNc,nc,oneNc);
     //Arr tmp = UPsiXc_a/Yc_a;
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
-    muc = num[0]/den[0];
     muc_a = num_a%den_a;
     //---------------------------------------------//
     //    calculate difference between points, 
@@ -205,32 +191,18 @@ void cokriging::buildModel(){
         d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
     }  
     //cheap
-    delete [] num;
-    num = mu_num_den(UPsidXe,d,ne,oneNe);
-    delete [] den;
-    den = mu_num_den(UPsidXe,oneNe,ne,oneNe);
-    mud = num[0]/den[0]; 
-    //New code
     d_a.Init(d,ne,1);
     num_a = mu_num_den(UPsidXe_a,d_a,oneNe_a);
     den_a = mu_num_den(UPsidXe_a,oneNe_a,oneNe_a);
     mud_a.Init(1,1);
     mud_a = num_a%den_a;
-    //end new code
     for(int ii=0;ii<nc;ii++){
-        dif[ii] = Yc[ii]-muc; 
+        dif[ii] = Yc[ii]-muc_a.val[0]; 
     }
     //difference
-    delete [] num;
-    num = mu_num_den(UPsiXc,dif,nc,dif);
-    SigmaSqrc = num[0]/nc;
     for(int ii=0;ii<ne;ii++){
-        difd[ii] = d[ii]-mud; 
+        difd[ii] = d[ii]-mud_a.val[0]; 
     }
-    delete [] num;
-    num = mu_num_den(UPsidXe,difd,ne,difd);
-    SigmaSqrd = num[0]/ne;
-    //new code
     Arr dif_a(dif,nc,1);
     num_a = mu_num_den(UPsiXc_a,dif_a,dif_a);
     SigmaSqrc_a.Init(1,1); 
@@ -239,7 +211,6 @@ void cokriging::buildModel(){
     num_a = mu_num_den(UPsidXe_a,difd_a,difd_a);
     SigmaSqrd_a.Init(1,1); 
     SigmaSqrd_a = num_a%ne;
-    //end new code
 
     //---------------------------------------------//
     //                construct C
