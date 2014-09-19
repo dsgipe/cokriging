@@ -579,11 +579,6 @@ void cokriging::write(){
     // Print private variables to screen
     // Print input variables to screen   
     //---------------------------------------------//
-   cout << "\nmuc: "<< muc;
-   cout << "\nnd: " ;for(int ii=0; ii<ne;ii++){ cout << d[ii]<<" " ;}
-   cout << "\nmud: "<< mud;
-   cout << "\nSigmaSqrc: "<< SigmaSqrc;
-   cout << "\nSigmaSqrd: "<< SigmaSqrd;
 }
 //************************************************
 void cokriging::predictor(double* x,int n){

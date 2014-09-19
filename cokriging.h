@@ -46,17 +46,6 @@ private:
     Arr CKPsidXe_a;
     Arr UPsidXe_a;
     //Kriging resulting variables
-    double* CKPsiXc;
-    double* UPsiXc;
-    double* CKPsiXe;
-    double* UPsiXe;
-    double* CKPsiXcXe;
-    double* CKPsiXeXc;
-    double* UPsiXcXe;
-    double* CKPsidXe;
-    double* UPsidXe;
-    double muc;
-    double mud;
     double* d;
     double SigmaSqrc;
     double SigmaSqrd;
