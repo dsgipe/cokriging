@@ -219,6 +219,10 @@ void cokriging::buildModel(){
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
     
     cout << "============= \ndebugging \n=============\n";
+    Arr C_12 = concatinate(C1_a,C2_a,1);
+    C1_a.print("C1"); 
+    C2_a.print("C2"); 
+    C_12.print("C12"); 
     //The 1st quadrant upper left corner
     counter = 0;
     rowcounter = 0;
