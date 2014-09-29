@@ -219,10 +219,19 @@ void cokriging::buildModel(){
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
     
     cout << "============= \ndebugging \n=============\n";
-    Arr C_12 = concatinate(C1_a,C2_a,1);
+    Arr tmp = C2_a.transpose();
+    C2_a.print("C2"); 
+    tmp.print("C2 transposed"); 
+    Arr C_12 = concatinate(C1_a,C2_a,2);
     C1_a.print("C1"); 
     C2_a.print("C2"); 
     C_12.print("C12"); 
+    Arr C_34 = concatinate(C3_a,C4_a,2);
+    C3_a.print("C3"); 
+    C4_a.print("C4"); 
+    C_34.print("C34"); 
+    Arr C_adbg =  concatinate(C_12,C_34,1);
+    C_adbg.print("C");
     //The 1st quadrant upper left corner
     counter = 0;
     rowcounter = 0;
@@ -275,6 +284,9 @@ void cokriging::buildModel(){
             rowcounter=0;
         }
     }
+    cout << endl;
+    cout << endl;
+    Write1Darray(C,ne+nc,ne+nc);
     //---------------------------------------------//
     //         combine Ye and Yc into Y
     //---------------------------------------------//
