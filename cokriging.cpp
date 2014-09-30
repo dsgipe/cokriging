@@ -145,8 +145,8 @@ void cokriging::buildModel(){
     UPsidXe_a = CKPsidXe_a.cholesky(); 
     //fill yet another Psi variable but not square and different results
     counter = 0;b = 0;
-    CKPsiXcXe_a.M = nc;
-    CKPsiXcXe_a.N = ne;
+    CKPsiXcXe_a.M = ne;
+    CKPsiXcXe_a.N = nc;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
              CKPsiXcXe_a.val[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
@@ -217,20 +217,11 @@ void cokriging::buildModel(){
     for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXeXc_a.val[ii];}
     for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc_a.val[0]*CKPsiXe_a.val[ii]+SigmaSqrd_a.val[0]*CKPsidXe_a.val[ii];}
     for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
-    
-    cout << "============= \ndebugging \n=============\n";
     Arr tmp = C2_a.transpose();
-    C2_a.print("C2"); 
-    tmp.print("C2 transposed"); 
     Arr C_12 = concatinate(C1_a,C2_a,2);
-    C1_a.print("C1"); 
-    C2_a.print("C2"); 
-    C_12.print("C12"); 
     Arr C_34 = concatinate(C3_a,C4_a,2);
-    C3_a.print("C3"); 
-    C4_a.print("C4"); 
-    C_34.print("C34"); 
     Arr C_adbg =  concatinate(C_12,C_34,1);
+    cout << "============= \ndebugging \n=============\n";
     C_adbg.print("C");
     //The 1st quadrant upper left corner
     counter = 0;
