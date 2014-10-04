@@ -1,7 +1,7 @@
 COMP = g++
 FILES = CK.cpp cokriging.o lpkinterface.o vector2array.o array.o
-PATH2LAPACK = ../lapack-3.3.0 
-PATH2ARRAY = ../array/
+PATH2LAPACK = ../../lapack-3.3.0 
+PATH2ARRAY = ../../array/
 LAPK = -llapack -lblas
 FC = -lgfortran
 OUT = CK

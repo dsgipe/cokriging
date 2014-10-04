@@ -55,6 +55,7 @@ private:
     Arr UC_a;
     Arr muc_a;
     Arr mud_a;
+    Arr mu_a;
     Arr SigmaSqrc_a;
     Arr SigmaSqrd_a;
 };
@@ -69,5 +70,9 @@ void Cholesky(int d,double*S,double*D);
 double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n);
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]);
 void Write1Darray(double A[],int m,int n);
-void Print(struct Array arr);
+
 //Arr based routines
+Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN);
+void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn);
+double sum_pred(Arr x1,Arr x2,double theta[],int p,int ii);
+Arr c_pred(double sigma, double rho,Arr x1, Arr x2, double theta[]);

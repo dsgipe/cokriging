@@ -28,7 +28,6 @@ cokriging::~cokriging(){
     delete [] Y;
     delete [] thetaD;//
     delete [] thetaC;//
-    //delete [] UPsiXcXe;
     delete [] d;
     delete [] UC;
 }
@@ -41,22 +40,26 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     //---------------------------------------------//
     //          intialize input variables
     //---------------------------------------------//
+
     // Higher fidelity - expensive parameters
     ne = Initne;
     Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
     Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
     Xe_a.Init(Initxe,ne,1);
     Ye_a.Init(Initye,ne,1);
+
     // Lower fidelity - cheap parameters
     nc = Initnc;
     Xc_a.Init(Initxc,nc,1);
     Yc_a.Init(Inityc,nc,1);
     Xc = new double[nc]; for(int ii =0;ii<nc;ii++){Xc[ii] = Initxc[ii];}
     Yc = new double[nc]; for(int ii =0;ii<nc;ii++){Yc[ii] = Inityc[ii];}
+
     //linearality control variables
     rho = Initrho;
     thetaD = new double[numofdim];  
     thetaC = new double[numofdim];
+
     //fill theta array
     for(int ii = 0;ii < numofdim;ii++){
         thetaD[ii] = pow(10.0,InitthetaD[ii]); 
@@ -69,29 +72,22 @@ void cokriging::resize(){
     //     Change arrays to the correct size 
     //     based on number of data points
     //---------------------------------------------//
+
     //Array class initialization
-    double *ncnc_zero= new double[nc*nc];
-    for(int ii=0;ii<nc*nc;ii++){ncnc_zero[ii] =0;} //initialize
-    double *ncne_zero = new double[nc*ne];  
-    for(int ii=0;ii<nc*ne;ii++){ncne_zero[ii] =0;} //initialize
-    double *nene_zero = new double[ne*ne];  
-    for(int ii=0;ii<ne*ne;ii++){nene_zero[ii] =0;} //initialize
-    UPsiXc_a.Init(ncnc_zero,nc,nc);
-    CKPsiXcXe_a.Init(ncne_zero,nc,ne);
-    CKPsiXeXc_a.Init(ncne_zero,ne,nc);
-    UPsidXe_a.Init(nene_zero,ne,ne); 
-    UPsiXe_a.Init(nene_zero,ne,ne);
-    CKPsiXc_a.Init(ncnc_zero,nc,nc) ;
-    CKPsiXe_a.Init(nene_zero,ne,ne) ;
-    CKPsidXe_a.Init(nene_zero,ne,ne);
-    delete [] ncnc_zero;
-    delete [] ncne_zero;  
-    delete [] nene_zero;  
+    UPsiXc_a   .Init(0.0,nc,nc);
+    CKPsiXcXe_a.Init(0.0,nc,ne);
+    CKPsiXeXc_a.Init(0.0,ne,nc);
+    UPsidXe_a  .Init(0.0,ne,ne); 
+    UPsiXe_a   .Init(0.0,ne,ne);
+    CKPsiXc_a  .Init(0.0,nc,nc) ;
+    CKPsiXe_a  .Init(0.0,ne,ne) ;
+    CKPsidXe_a .Init(0.0,ne,ne);
+    
     // old array stle initialization
     d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
     UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
     Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
-    UC_a.Init(UC,ne+nc,ne+nc);
+    UC_a.Init(0.0,ne+nc,ne+nc);
     Y_a.Init(Y,ne+nc,1);
 }
 //************************************************
@@ -110,11 +106,10 @@ void cokriging::buildModel(){
     // initialize  and declare local variables
     //---------------------------------------------//
     double C[(nc+ne)*(nc+ne)];
-    double oneNe[ne];for(int ii=0;ii<ne;ii++){oneNe[ii] =1;} //array of ones
-    double oneNc[nc];for(int ii=0;ii<nc;ii++){oneNc[ii] =1;} //array of ones
     double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
-    Arr oneNe_a(oneNe,ne,1);
-    Arr oneNc_a(oneNc,nc,1);
+    Arr oneNe_a(1.0,ne,1);
+    Arr oneNc_a(1.0,nc,1);
+    Arr oneNeNc_a(1.0,ne+nc,1);
     double dif[nc];
     double difd[ne];
     // used to contruct C
@@ -122,10 +117,10 @@ void cokriging::buildModel(){
     double C2[nc*ne];//quadrant 2
     double C3[ne*nc];//quadrant 3
     double C4[ne*ne];//quadrant 4
-    Arr C1_a;C1_a.Init(nc,nc);//quadrant 1
-    Arr C2_a;C2_a.Init(nc,ne);//quadrant 2
-    Arr C3_a;C3_a.Init(ne,nc);//quadrant 3
-    Arr C4_a;C4_a.Init(ne,ne);//quadrant 4
+    Arr C1_a(0.0,nc,nc);//quadrant 1
+    Arr C2_a(0.0,nc,ne);//quadrant 2
+    Arr C3_a(0.0,ne,nc);//quadrant 3
+    Arr C4_a(0.0,ne,ne);//quadrant 4
     Arr C_a; C_a.Init(ne+nc,ne+nc);
     //counters
     int rowcounter = 0;
@@ -163,7 +158,6 @@ void cokriging::buildModel(){
     // solve the rest of the kriging model
     //left it as an array since multi-dimensional may need an array; and it is more convenient
     Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
-    //Arr tmp = UPsiXc_a/Yc_a;
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
     muc_a = num_a%den_a;
     //---------------------------------------------//
@@ -212,72 +206,18 @@ void cokriging::buildModel(){
     C2_a = times(rho*SigmaSqrc_a.val[0],CKPsiXcXe_a);//
     C3_a = times(rho*SigmaSqrc_a.val[0],CKPsiXeXc_a);//
     C4_a = times(rho*rho*SigmaSqrc_a.val[0],CKPsiXe_a)+times(SigmaSqrd_a.val[0],CKPsidXe_a);//
-    for(int ii=0;ii<nc*nc;ii++){C1[ii]=SigmaSqrc_a.val[0]*CKPsiXc_a.val[ii];}
-    for(int ii=0;ii<ne*nc;ii++){C2[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXcXe_a.val[ii];}
-    for(int ii=0;ii<ne*nc;ii++){C3[ii]=rho*SigmaSqrc_a.val[0]*CKPsiXeXc_a.val[ii];}
-    for(int ii=0;ii<ne*ne;ii++){C4[ii]=rho*rho*SigmaSqrc_a.val[0]*CKPsiXe_a.val[ii]+SigmaSqrd_a.val[0]*CKPsidXe_a.val[ii];}
-    for(int ii=0;ii<(nc+ne)*(nc+ne);ii++){ C[ii]=0; }//Initialize to 0
-    Arr tmp = C2_a.transpose();
-    Arr C_12 = concatinate(C1_a,C2_a,2);
-    Arr C_34 = concatinate(C3_a,C4_a,2);
+    
+    Arr C_12 =    concatinate(C1_a,C2_a,2);
+    Arr C_34 =    concatinate(C3_a,C4_a,2);
     Arr C_adbg =  concatinate(C_12,C_34,1);
-    cout << "============= \ndebugging \n=============\n";
-    C_adbg.print("C");
-    //The 1st quadrant upper left corner
+    
+    //Fill C - will be removed once the pointer arrays are replaced with Arr array
     counter = 0;
-    rowcounter = 0;
-    //Fill C with C1;
-    for(int ii=0;ii<nc*nc;ii++){
-        C[counter]=C1[ii];
-        counter++;
-        rowcounter++;
-        if (rowcounter ==nc){
-            counter += ne;
-            rowcounter=0;
+    for (int ii = 0;ii < C_adbg.M;ii++)
+        for (int jj = 0;jj<C_adbg.N;jj++){
+            C[counter] = C_adbg.element(ii,jj);counter++;
         }
-    }
-    //Fill C with C2
-    //The 2nd quadrant upper left corner
-    counter = (nc+ne)*nc;
-    rowcounter = 0;
-    for(int ii=0;ii<ne*nc;ii++){
-        C[counter]=C2[ii];
-        counter++;
-        rowcounter++;
-        if(rowcounter==nc){
-            counter+=ne;
-            rowcounter=0;
-        }
-    }
-    //Fill C with C3
-    //The 3rd quadrant upper left corner
-    counter = nc;
-    rowcounter = 0;
-    for(int ii=0;ii<ne*nc;ii++){
-        C[counter]=C3[ii];
-        counter++;
-        rowcounter++;
-        if(rowcounter==ne){
-            counter+=nc;
-            rowcounter=0;
-        }
-    }
-    //Fill C with C4
-    //The 4th quadrant upper left corner
-    counter = (nc+ne)*nc+nc;
-    rowcounter = 0;
-    for(int ii=0;ii<ne*ne;ii++){
-        C[counter]=C4[ii];
-        counter++;
-        rowcounter++;
-        if(rowcounter==ne){
-            counter+=nc;
-            rowcounter=0;
-        }
-    }
-    cout << endl;
-    cout << endl;
-    Write1Darray(C,ne+nc,ne+nc);
+    
     //---------------------------------------------//
     //         combine Ye and Yc into Y
     //---------------------------------------------//
@@ -285,11 +225,20 @@ void cokriging::buildModel(){
     Cholesky(ne+nc,C,UC); 
     for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
     for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
-    cout<<"\n\n\n\n\n:Y: ";Write1Darray(Y,ne+nc,1);
-    
     double *num = mu_num_den(UC,Y,ne+nc,oneNeNc);
     double *den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
     mu = num[0]/den[0];
+   
+    UC_a = C_adbg.cholesky();
+    Y_a = concatinate(Yc_a,Ye_a,2);
+    num_a =       mu_num_den(UC_a,Y_a,oneNeNc_a);
+    den_a =       mu_num_den(UC_a,oneNeNc_a,oneNeNc_a);
+    mu_a = num_a%den_a;
+    
+    cout << "============= \ndebugging \n=============\n";
+    Y_a.print("YA");
+    cout<<"\n\n\n\n\n:Y: ";Write1Darray(Y,ne+nc,1);
+    mu_a.print("mu_a");
     cout << "\nmu\n" << mu;
     delete [] num;
     delete [] den;
@@ -431,27 +380,6 @@ double* transpose(double arr[],int n){
         }
     }
     return tran_arr;
-}
-//************************************************
-void Cholesky_arr(const Arr& S,Arr& D){
-    //---------------------------------------------//
-    // Solve cholesky of a square array
-    // Inputs: 
-    //    S: input array
-    //    D: output array. Cholesky of input array. 
-    //---------------------------------------------//
-    int d = S.M;
-    D.M = S.M;D.N=S.N;
-    for(int k=0;k<d;++k){
-        double sum=0.;
-        for(int p=0;p<k;++p)sum+=D.val[k*d+p]*D.val[k*d+p];
-        D.val[k*d+k]=sqrt(S.val[k*d+k]-sum);
-        for(int i=k+1;i<d;++i){
-           double sum=0.;
-           for(int p=0;p<k;++p)sum+=D.val[i*d+p]*D.val[k*d+p];
-           D.val[i*d+k]=(S.val[i*d+k]-sum)/D.val[k*d+k];
-        }
-    }
 }
 //************************************************
 void Cholesky(int d,double*S,double*D){
@@ -605,9 +533,11 @@ void cokriging::predictor(double* x,int n){
     double* c   = new double[nc+ne];for(int ii=0;ii<nc+ne;ii++){c[ii]=0;}
     double* diffY_mu = new double[ne+nc];for(int ii=0;ii<nc+ne;ii++){diffY_mu[ii]=0;}
     double* Yout;
-    cc = c_pred(SigmaSqrc,rho,Xc,nc,x,n,thetaC);
-    cd1 = c_pred(SigmaSqrc,rho*rho,Xe,ne,x,n,thetaC);
-    cd2 = c_pred(SigmaSqrd,1,Xe,ne,x,n,thetaD);
+    cc =       c_pred(SigmaSqrc_a.val[0],rho,Xc,nc,x,n,thetaC);
+    Arr x_a(x,n,1);
+    Arr cc_a = c_pred(SigmaSqrc_a.val[0],rho,Xc_a,x_a,thetaC);
+    cd1 = c_pred(SigmaSqrc_a.val[0],rho*rho,Xe,ne,x,n,thetaC);
+    cd2 = c_pred(SigmaSqrd_a.val[0],1,Xe,ne,x,n,thetaD);
     //combine cd1 and cd2
     for(int ii=0;ii<ne;ii++){cd[ii]=cd1[ii]+cd2[ii];}
     //concatinate cc and cd
@@ -625,7 +555,7 @@ void cokriging::predictor(double* x,int n){
     delete [] MLD1;
     delete [] MLD2;
     delete [] Trans;
-    cout<<"\n:Yout: "<< Yout[0]+mu;
+    cout<<"\n:Xin " << x[0] << " Yout: "<< Yout[0]<<endl;
     delete [] cc;
     delete [] cd;
     delete [] c;
@@ -633,12 +563,6 @@ void cokriging::predictor(double* x,int n){
     delete [] cd2;
     delete [] diffY_mu;
     delete [] Yout;
-    //delete (cd ); 
-    //delete (cd1); 
-    //delete (cd2); 
-    //delete (c  ); 
-    //delete (diffY_mu);
-    //delete (UC_t);
 }
 //************************************************
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]){
@@ -658,11 +582,24 @@ double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n){
     }
     return sumVal;
 }
-void Print(struct Array arr){
-
-    for(int ii = 0; ii < arr.size;ii++){
-        cout << " " << arr.val[ii]; 
+//************************************************
+Arr c_pred(double sigma, double rho,Arr x1, Arr x2, double theta[]){
+    int p =2;
+    int n1 = x1.M;
+    Arr c(0.0,n1,1);
+    for(int ii=0;ii<n1;ii++){
+        //get sum value, different from previous usage.
+        // c.push(rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii)),ii,1);
+        cout << " sum result " <<rho*sigma* exp(-sum_pred(x1,x2,theta,p,ii));
     }
-    cout << endl;
+    return c;
+}
+//************************************************
+double sum_pred(Arr x1,Arr x2,double theta[],int p,int ii){
+    double sumVal = 0;
+    for(int jj = 0;jj<x2.M;jj++){
+        sumVal+=theta[0]*pow(abs(x1.element(ii,1)-x2.element(jj,1)),p);
+    }
+    return sumVal;
 }
 
