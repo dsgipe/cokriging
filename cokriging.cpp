@@ -235,11 +235,6 @@ void cokriging::buildModel(){
     den_a =       mu_num_den(UC_a,oneNeNc_a,oneNeNc_a);
     mu_a = num_a%den_a;
     
-    cout << "============= \ndebugging \n=============\n";
-    Y_a.print("YA");
-    cout<<"\n\n\n\n\n:Y: ";Write1Darray(Y,ne+nc,1);
-    mu_a.print("mu_a");
-    cout << "\nmu\n" << mu;
     delete [] num;
     delete [] den;
 }
@@ -535,9 +530,15 @@ void cokriging::predictor(double* x,int n){
     double* Yout;
     cc =       c_pred(SigmaSqrc_a.val[0],rho,Xc,nc,x,n,thetaC);
     Arr x_a(x,n,1);
-    Arr cc_a = c_pred(SigmaSqrc_a.val[0],rho,Xc_a,x_a,thetaC);
-    cd1 = c_pred(SigmaSqrc_a.val[0],rho*rho,Xe,ne,x,n,thetaC);
-    cd2 = c_pred(SigmaSqrd_a.val[0],1,Xe,ne,x,n,thetaD);
+    Arr cc_a =  c_pred(SigmaSqrc_a.val[0],rho,Xc_a,x_a,thetaC);
+    cd1 =       c_pred(SigmaSqrc_a.val[0],rho*rho,Xe,ne,x,n,thetaC);
+    Arr cd1_a = c_pred(SigmaSqrc_a.val[0],rho*rho,Xe_a, x_a,thetaC);
+    cd2 =       c_pred(SigmaSqrd_a.val[0],1,Xe,ne,x,n,thetaD);
+    Arr cd2_a = c_pred(SigmaSqrd_a.val[0],1,Xe_a, x_a,thetaD);
+    cd1_a.print("cd1_a");
+    cout << "cd1_\n";
+    cout << "============= \ndebugging \n=============\n";
+    Write1Darray(cd1,cd1_a.M,cd1_a.N);
     //combine cd1 and cd2
     for(int ii=0;ii<ne;ii++){cd[ii]=cd1[ii]+cd2[ii];}
     //concatinate cc and cd
@@ -572,6 +573,7 @@ double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2,
         //get sum value, different from previous usage.
         c[ii]=rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii,n2));
     }
+    cout << endl;
     return c;
 }
 //************************************************
@@ -588,17 +590,16 @@ Arr c_pred(double sigma, double rho,Arr x1, Arr x2, double theta[]){
     int n1 = x1.M;
     Arr c(0.0,n1,1);
     for(int ii=0;ii<n1;ii++){
-        //get sum value, different from previous usage.
-        // c.push(rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii)),ii,1);
-        cout << " sum result " <<rho*sigma* exp(-sum_pred(x1,x2,theta,p,ii));
+        c.push(rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii)),ii,0);
     }
+    cout << endl;
     return c;
 }
 //************************************************
 double sum_pred(Arr x1,Arr x2,double theta[],int p,int ii){
     double sumVal = 0;
     for(int jj = 0;jj<x2.M;jj++){
-        sumVal+=theta[0]*pow(abs(x1.element(ii,1)-x2.element(jj,1)),p);
+        sumVal+=theta[0]*pow(abs(x1.element(ii,0)-x2.element(jj,0)),p);
     }
     return sumVal;
 }
