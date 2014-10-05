@@ -528,17 +528,21 @@ void cokriging::predictor(double* x,int n){
     double* c   = new double[nc+ne];for(int ii=0;ii<nc+ne;ii++){c[ii]=0;}
     double* diffY_mu = new double[ne+nc];for(int ii=0;ii<nc+ne;ii++){diffY_mu[ii]=0;}
     double* Yout;
-    cc =       c_pred(SigmaSqrc_a.val[0],rho,Xc,nc,x,n,thetaC);
     Arr x_a(x,n,1);
     Arr cc_a =  c_pred(SigmaSqrc_a.val[0],rho,Xc_a,x_a,thetaC);
-    cd1 =       c_pred(SigmaSqrc_a.val[0],rho*rho,Xe,ne,x,n,thetaC);
     Arr cd1_a = c_pred(SigmaSqrc_a.val[0],rho*rho,Xe_a, x_a,thetaC);
-    cd2 =       c_pred(SigmaSqrd_a.val[0],1,Xe,ne,x,n,thetaD);
     Arr cd2_a = c_pred(SigmaSqrd_a.val[0],1,Xe_a, x_a,thetaD);
-    cd1_a.print("cd1_a");
-    cout << "cd1_\n";
-    cout << "============= \ndebugging \n=============\n";
-    Write1Darray(cd1,cd1_a.M,cd1_a.N);
+    //combine cd1 and cd2
+    Arr cd_a = cd1_a+cd2_a;
+    //concatinate cc and cd
+    Arr c_a = concatinate(cc_a,cd_a,0);
+    //solve the surrogate
+    Arr diffy_mu_a = Y_a + (-mu_a.element(0,0));
+    
+    cc =        c_pred(SigmaSqrc_a.val[0],rho,Xc,nc,x,n,thetaC);
+    cd1 =       c_pred(SigmaSqrc_a.val[0],rho*rho,Xe,ne,x,n,thetaC);
+    cd2 =       c_pred(SigmaSqrd_a.val[0],1,Xe,ne,x,n,thetaD);
+     
     //combine cd1 and cd2
     for(int ii=0;ii<ne;ii++){cd[ii]=cd1[ii]+cd2[ii];}
     //concatinate cc and cd
@@ -546,6 +550,11 @@ void cokriging::predictor(double* x,int n){
     for(int ii=0;ii<ne;ii++){c[ii+nc]=cd[ii];}
     //solve the surrogate
     for(int ii=0;ii<ne+nc;ii++){diffY_mu[ii]=Y[ii]-mu;}
+    //ctest_a.print("ctest_a");
+    cout << "========== Debugging ==========\n";
+    diffy_mu_a.print("diffy_muc_a");
+    cout << "diffy_muc_\n";
+    Write1Darray(diffY_mu,diffy_mu_a.M,diffy_mu_a.N);
     double * Trans;
     Trans =  transpose(UC,ne+nc);
     double * MLD1;
