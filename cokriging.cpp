@@ -110,8 +110,6 @@ void cokriging::buildModel(){
     Arr oneNe_a(1.0,ne,1);
     Arr oneNc_a(1.0,nc,1);
     Arr oneNeNc_a(1.0,ne+nc,1);
-    double dif[nc];
-    double difd[ne];
     // used to contruct C
     double C1[nc*nc];//quadrant 1
     double C2[nc*ne];//quadrant 2
@@ -169,7 +167,7 @@ void cokriging::buildModel(){
     //---------------------------------------------//
     //expensive
     for(int ii = 0;ii<ne;ii++){
-        d[ii] = Ye[ii]-rho*Yc[nc-ne+ii];
+        d[ii] = Ye_a.element(ii,0)-rho*Yc_a.element(nc-ne+ii,0);
     }  
     //cheap
     d_a.Init(d,ne,1);
@@ -177,18 +175,12 @@ void cokriging::buildModel(){
     den_a = mu_num_den(UPsidXe_a,oneNe_a,oneNe_a);
     mud_a.Init(1,1);
     mud_a = num_a%den_a;
-    for(int ii=0;ii<nc;ii++){
-        dif[ii] = Yc[ii]-muc_a.val[0]; 
-    }
     //difference
-    for(int ii=0;ii<ne;ii++){
-        difd[ii] = d[ii]-mud_a.val[0]; 
-    }
-    Arr dif_a(dif,nc,1);
+    Arr dif_a = Yc_a+(-muc_a.element(0,0));
     num_a = mu_num_den(UPsiXc_a,dif_a,dif_a);
     SigmaSqrc_a.Init(1,1); 
     SigmaSqrc_a = num_a%nc;
-    Arr difd_a(difd,ne,1);
+    Arr difd_a = d_a+(-mud_a.element(0,0));
     num_a = mu_num_den(UPsidXe_a,difd_a,difd_a);
     SigmaSqrd_a.Init(1,1); 
     SigmaSqrd_a = num_a%ne;
@@ -210,33 +202,16 @@ void cokriging::buildModel(){
     Arr C_12 =    concatinate(C1_a,C2_a,2);
     Arr C_34 =    concatinate(C3_a,C4_a,2);
     Arr C_adbg =  concatinate(C_12,C_34,1);
-    
-    //Fill C - will be removed once the pointer arrays are replaced with Arr array
-    counter = 0;
-    for (int ii = 0;ii < C_adbg.M;ii++)
-        for (int jj = 0;jj<C_adbg.N;jj++){
-            C[counter] = C_adbg.element(ii,jj);counter++;
-        }
-    
+   
     //---------------------------------------------//
     //         combine Ye and Yc into Y
     //---------------------------------------------//
-    for(int ii = 0;ii< (ne+nc)*(ne+nc);ii++){UC[ii] = 0;}
-    Cholesky(ne+nc,C,UC); 
-    for(int ii = 0;ii< nc;ii++){Y[ii] = Yc[ii];}
-    for(int ii = 0;ii< ne;ii++){Y[ii+nc] = Ye[ii];}
-    double *num = mu_num_den(UC,Y,ne+nc,oneNeNc);
-    double *den = mu_num_den(UC,oneNeNc,ne+nc,oneNeNc);
-    mu = num[0]/den[0];
-   
     UC_a = C_adbg.cholesky();
     Y_a = concatinate(Yc_a,Ye_a,2);
     num_a =       mu_num_den(UC_a,Y_a,oneNeNc_a);
     den_a =       mu_num_den(UC_a,oneNeNc_a,oneNeNc_a);
     mu_a = num_a%den_a;
     
-    delete [] num;
-    delete [] den;
 }
 //************************************************
 void Write1Darray(double A[],int m,int n){
@@ -521,13 +496,6 @@ void cokriging::predictor(double* x,int n){
     // Outputs:
     //    y - currently not returned, but will be the surrogate result
     //---------------------------------------------//
-    double* cc ;
-    double* cd  = new double[ne];for(int ii=0;ii<ne;ii++){cd[ii]=0;}
-    double* cd1;
-    double* cd2;
-    double* c   = new double[nc+ne];for(int ii=0;ii<nc+ne;ii++){c[ii]=0;}
-    double* diffY_mu = new double[ne+nc];for(int ii=0;ii<nc+ne;ii++){diffY_mu[ii]=0;}
-    double* Yout;
     Arr x_a(x,n,1);
     Arr cc_a =  c_pred(SigmaSqrc_a.val[0],rho,Xc_a,x_a,thetaC);
     Arr cd1_a = c_pred(SigmaSqrc_a.val[0],rho*rho,Xe_a, x_a,thetaC);
@@ -538,41 +506,11 @@ void cokriging::predictor(double* x,int n){
     Arr c_a = concatinate(cc_a,cd_a,0);
     //solve the surrogate
     Arr diffy_mu_a = Y_a + (-mu_a.element(0,0));
-    
-    cc =        c_pred(SigmaSqrc_a.val[0],rho,Xc,nc,x,n,thetaC);
-    cd1 =       c_pred(SigmaSqrc_a.val[0],rho*rho,Xe,ne,x,n,thetaC);
-    cd2 =       c_pred(SigmaSqrd_a.val[0],1,Xe,ne,x,n,thetaD);
      
-    //combine cd1 and cd2
-    for(int ii=0;ii<ne;ii++){cd[ii]=cd1[ii]+cd2[ii];}
-    //concatinate cc and cd
-    for(int ii=0;ii<nc;ii++){c[ii]=cc[ii];}
-    for(int ii=0;ii<ne;ii++){c[ii+nc]=cd[ii];}
     //solve the surrogate
-    for(int ii=0;ii<ne+nc;ii++){diffY_mu[ii]=Y[ii]-mu;}
-    //ctest_a.print("ctest_a");
-    cout << "========== Debugging ==========\n";
-    diffy_mu_a.print("diffy_muc_a");
-    cout << "diffy_muc_\n";
-    Write1Darray(diffY_mu,diffy_mu_a.M,diffy_mu_a.N);
-    double * Trans;
-    Trans =  transpose(UC,ne+nc);
-    double * MLD1;
-    MLD1 =  matrixLeftDivision(Trans,diffY_mu,ne+nc,1);
-    double * MLD2;
-    MLD2 = matrixLeftDivision(UC,MLD1 ,ne+nc,1);
-    Yout =  matrixMultiply(c,MLD2,1,1,nc+ne);
-    delete [] MLD1;
-    delete [] MLD2;
-    delete [] Trans;
-    cout<<"\n:Xin " << x[0] << " Yout: "<< Yout[0]<<endl;
-    delete [] cc;
-    delete [] cd;
-    delete [] c;
-    delete [] cd1;
-    delete [] cd2;
-    delete [] diffY_mu;
-    delete [] Yout;
+    Arr Yout_a = c_a*(UC_a/(UC_a.transpose()/diffy_mu_a));
+
+    cout<<"Xin " <<x_a.element(0,0) << " Yout: "<< Yout_a.element(0,0)<<endl;
 }
 //************************************************
 double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]){
