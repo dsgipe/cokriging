@@ -21,15 +21,11 @@ cokriging::~cokriging(){
     //---------------------------------------------//
     //            destructor
     //---------------------------------------------//
-    delete [] Xe;//expensive independent var    
-    delete [] Ye;//expensive dependent var    
-    delete [] Xc;//cheap independent var    
-    delete [] Yc;//cheap dependent var   
-    delete [] Y;
+    // Only require to delete pointers, 
+    // Arr class handles it's own pointer destruction
+    //    and does not need to be implicitly called
     delete [] thetaD;//
     delete [] thetaC;//
-    delete [] d;
-    delete [] UC;
 }
 //************************************************
 cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Inityc[],
@@ -43,8 +39,6 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
 
     // Higher fidelity - expensive parameters
     ne = Initne;
-    Xe = new double[ne]; for(int ii =0;ii<ne;ii++){Xe[ii] = Initxe[ii];}
-    Ye = new double[ne]; for(int ii =0;ii<ne;ii++){Ye[ii] = Initye[ii];}
     Xe_a.Init(Initxe,ne,1);
     Ye_a.Init(Initye,ne,1);
 
@@ -52,8 +46,6 @@ cokriging::cokriging(double Initxe[],double Initye[],double Initxc[],double Init
     nc = Initnc;
     Xc_a.Init(Initxc,nc,1);
     Yc_a.Init(Inityc,nc,1);
-    Xc = new double[nc]; for(int ii =0;ii<nc;ii++){Xc[ii] = Initxc[ii];}
-    Yc = new double[nc]; for(int ii =0;ii<nc;ii++){Yc[ii] = Inityc[ii];}
 
     //linearality control variables
     rho = Initrho;
@@ -79,16 +71,11 @@ void cokriging::resize(){
     CKPsiXeXc_a.Init(0.0,ne,nc);
     UPsidXe_a  .Init(0.0,ne,ne); 
     UPsiXe_a   .Init(0.0,ne,ne);
-    CKPsiXc_a  .Init(0.0,nc,nc) ;
-    CKPsiXe_a  .Init(0.0,ne,ne) ;
+    CKPsiXc_a  .Init(0.0,nc,nc);
+    CKPsiXe_a  .Init(0.0,ne,ne);
     CKPsidXe_a .Init(0.0,ne,ne);
-    
-    // old array stle initialization
-    d = new double[nc]; for(int ii=0;ii<nc;ii++){d[ii] =0;} //initialize
-    UC = new double[(ne+nc)*(ne+nc)]; for(int ii=0;ii<(ne+nc)*(ne+nc);ii++){UC[ii] =0;} //initialize
-    Y = new double[nc+ne]; for(int ii=0;ii<ne+nc;ii++){Y[ii] =0;} //initialize
-    UC_a.Init(0.0,ne+nc,ne+nc);
-    Y_a.Init(Y,ne+nc,1);
+    UC_a       .Init(0.0,ne+nc,ne+nc);
+    Y_a        .Init(0.0,ne+nc,1);
 }
 //************************************************
 void cokriging::buildModel(){
@@ -96,53 +83,42 @@ void cokriging::buildModel(){
     //Main function for developing the cokriging model
     //---------------------------------------------//
 
-    //---------------------------------------------//
-    // initialize  and declare cokriging variables
-    //---------------------------------------------//
     //resize all arrays to fit the data set
     resize();
-    int p = 2;//Curremtly a constant, but could be varied to change kriging differentiation
+    int p = 2;//Currently a constant, but could be varied to change kriging differentiation
     //---------------------------------------------//
     // initialize  and declare local variables
     //---------------------------------------------//
-    double C[(nc+ne)*(nc+ne)];
-    double oneNeNc[ne+nc];for(int ii=0;ii<ne+nc;ii++){oneNeNc[ii] =1;} //array of ones
     Arr oneNe_a(1.0,ne,1);
     Arr oneNc_a(1.0,nc,1);
     Arr oneNeNc_a(1.0,ne+nc,1);
     // used to contruct C
-    double C1[nc*nc];//quadrant 1
-    double C2[nc*ne];//quadrant 2
-    double C3[ne*nc];//quadrant 3
-    double C4[ne*ne];//quadrant 4
     Arr C1_a(0.0,nc,nc);//quadrant 1
     Arr C2_a(0.0,nc,ne);//quadrant 2
     Arr C3_a(0.0,ne,nc);//quadrant 3
     Arr C4_a(0.0,ne,ne);//quadrant 4
-    Arr C_a; C_a.Init(ne+nc,ne+nc);
+    Arr C_a(ne+nc,ne+nc);//just create the space without initializing
     //counters
-    int rowcounter = 0;
     int counter = 0;
     int b = 0;
     //---------------------------------------------//
     // Build all the various Psi 
     // variables for cheap and expensive models
     //---------------------------------------------//
-    buildPsi(Xc_a,thetaC,CKPsiXc_a);
-    buildPsi(Xe_a,thetaC,CKPsiXe_a);
-    buildPsi(Xe_a,thetaD,CKPsidXe_a);
+    buildPsi(Xc_a,thetaC,/*&*/CKPsiXc_a);
+    buildPsi(Xe_a,thetaC,/*&*/CKPsiXe_a);
+    buildPsi(Xe_a,thetaD,/*&*/CKPsidXe_a);
     
     //calculate cholesky, 
     UPsiXe_a  = CKPsiXe_a.cholesky(); 
     UPsiXc_a  = CKPsiXc_a.cholesky(); 
     UPsidXe_a = CKPsidXe_a.cholesky(); 
     //fill yet another Psi variable but not square and different results
-    counter = 0;b = 0;
     CKPsiXcXe_a.M = ne;
     CKPsiXcXe_a.N = nc;
     for (int ii = 0;ii<nc;ii++){
          for(int jj=0;jj<ne;jj++){
-             CKPsiXcXe_a.val[b+counter*nc] = exp(-sum(Xc,Xe,thetaC,p,ii,jj));
+             CKPsiXcXe_a.val[b+counter*nc] = exp(-sum(Xc_a.val,Xe_a.val,thetaC,p,ii,jj));
              counter++; 
              if(counter == ne){
                 counter =0;
@@ -153,8 +129,7 @@ void cokriging::buildModel(){
     CKPsiXeXc_a = CKPsiXcXe_a.transpose();
     //Compute kriging parameters.
     
-    // solve the rest of the kriging model
-    //left it as an array since multi-dimensional may need an array; and it is more convenient
+    //left following as an array since multi-dimensional may need an array; and it is more convenient
     Arr num_a = mu_num_den(UPsiXc_a,Yc_a,oneNc_a);
     Arr den_a = mu_num_den(UPsiXc_a,oneNc_a,oneNc_a);
     muc_a = num_a%den_a;
@@ -166,11 +141,11 @@ void cokriging::buildModel(){
     //    This needs to be confirmed with more tests
     //---------------------------------------------//
     //expensive
+    d_a.Init(0.0,ne,1);
     for(int ii = 0;ii<ne;ii++){
-        d[ii] = Ye_a.element(ii,0)-rho*Yc_a.element(nc-ne+ii,0);
+        d_a.push(Ye_a.element(ii,0)-rho*Yc_a.element(nc-ne+ii,0),ii,0);
     }  
     //cheap
-    d_a.Init(d,ne,1);
     num_a = mu_num_den(UPsidXe_a,d_a,oneNe_a);
     den_a = mu_num_den(UPsidXe_a,oneNe_a,oneNe_a);
     mud_a.Init(1,1);
@@ -204,39 +179,14 @@ void cokriging::buildModel(){
     Arr C_adbg =  concatinate(C_12,C_34,1);
    
     //---------------------------------------------//
-    //         combine Ye and Yc into Y
+    //    combine Ye and Yc into Y solve for mu
     //---------------------------------------------//
-    UC_a = C_adbg.cholesky();
-    Y_a = concatinate(Yc_a,Ye_a,2);
-    num_a =       mu_num_den(UC_a,Y_a,oneNeNc_a);
-    den_a =       mu_num_den(UC_a,oneNeNc_a,oneNeNc_a);
-    mu_a = num_a%den_a;
+    UC_a  = C_adbg.cholesky();
+    Y_a   = concatinate(Yc_a,Ye_a,2);
+    num_a = mu_num_den(UC_a,Y_a,oneNeNc_a);
+    den_a = mu_num_den(UC_a,oneNeNc_a,oneNeNc_a);
+    mu_a  = num_a%den_a;
     
-}
-//************************************************
-void Write1Darray(double A[],int m,int n){
-    //---------------------------------------------//
-    //prints out what is a matrix in row major format
-    //inputs:
-    //     Write A, in columns of m, and rows of n
-    //     outputs A to the  screen 
-    //---------------------------------------------//
-    int counter = 0;
-    int b = 0;
-    for(int ii = 0; ii < m;ii++){ 
-        if(ii ==0){  cout << setw(9);}
-        for(int jj = 0; jj < n;jj++){ 
-            cout  << setiosflags(ios::fixed) << setprecision(2)<<  A[b+counter*n] ;
-            cout << setw(9);
-            //cout << setiosflags(ios::fixed) << setprecision(4) << A[b+counter*n]<< "\t";
-            counter ++;
-            if(counter == m){
-               counter =0;
-               b++;
-               cout << endl;
-            }
-        }
-    }
 }
 double sum(double x1[],double x2[],double theta[],int p,int ii,int jj){
     //---------------------------------------------//
@@ -255,32 +205,6 @@ double sum(double x1[],double x2[],double theta[],int p,int ii,int jj){
 }
 
 //************************************************
-double* mu_num_den(double* UPsiX,double* Y,int n,double* oneN){
-    //---------------------------------------------//
-    // Used to simplify some of the matrix math used in solving for kriging 
-    // Inputs:
-    //     UPsiX is a matrix of size nxn, 
-    //     Y is a array of size nx1 or 1xn; since the array are column arrays the size doesn't matter for a 1 d vector. 
-    //     oneN is also an array of size nx1 or 1xn
-    // Returns:
-    //    array of 1x1 solving the matrix equation One*(UPsiX\(UPsiX\Y))
-    double * Trans;
-    Trans = transpose(UPsiX,n);
-    double * MLD1;
-    double * MLD2;
-    double * MLD3;
-    MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
-    MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
-    MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
-    cout << "MLD3_old\n";
-    Write1Darray(MLD3,1,1);
-    delete [] Trans;
-    delete [] MLD1;    
-    delete [] MLD2;
-    //---------------------------------------------//
-    return MLD3;
-}
-//************************************************
 Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN){
     //---------------------------------------------//
     // Used to simplify some of the matrix math used in solving for kriging 
@@ -290,87 +214,14 @@ Arr mu_num_den(Arr& UPsiX,Arr& Y,Arr& oneN){
     //     oneN is also an array of size nx1 or 1xn
     // Returns:
     //    array of 1x1 solving the matrix equation One*(UPsiX\(UPsiX\Y))
-    //Arr MLD1_a;
-    //MLD1_a.Init(Y.M,Y.N);
+    //---------------------------------------------//
+    
     //Solve vector algebra
-    Arr MLD2_a= (UPsiX/(UPsiX.transpose()/Y));
-    Arr MLD1_a = oneN*MLD2_a;
-    oneN.print("one_n");
-    MLD2_a.print("MLD2_a");
-    MLD1_a.print("MLD3_a");
-    //MLD1 = matrixLeftDivision(Trans,/*\*/Y /*size info*/ ,n,1);
-    //MLD2 = matrixLeftDivision(UPsiX,/*\*/ MLD1,n,1);
-    //MLD3 = matrixMultiply(oneN, /* X */MLD2 ,1,1,n);
+    Arr MLD1_a = oneN*(UPsiX/(UPsiX.transpose()/Y));
     //---------------------------------------------//
     return MLD1_a;
 }
 
-//************************************************
-double* transposeNoneSquare(double arr[],int nc,int nr){
-    //---------------------------------------------//
-    // Transpose a row ordered array, arr,
-    // Inputs:
-    //     arr: 1d array in column ordered format
-    //     nc:  number of columns
-    //     nr:  number of rows
-    // Returns:
-    //     transpose of arr
-    //---------------------------------------------//
-    int counter  = 0;
-    int b = 0;
-    double* tran_arr = new double[nc*nr];
-    for(int ii = 0; ii < nc*nr;ii++){
-        tran_arr[b+counter*nr] = arr[ii];
-        counter++;
-        if(counter == nc){
-           counter =0;
-           b++;
-        }
-    }
-    return tran_arr;
-
-}
-//************************************************
-double* transpose(double arr[],int n){
-    //---------------------------------------------//
-    //transpose a column ordered array
-    //---------------------------------------------//
-    // Plan on removing function for the more
-    // general none square version
-    //---------------------------------------------//
-    double* tran_arr = new double[n*n];
-    int counter  = 0;
-    int b = 0;
-    for(int ii = 0; ii < n*n;ii++){
-        tran_arr[b+counter*n] = arr[ii];
-        counter++;
-        if(counter == n){
-           counter =0;
-           b++;
-        }
-    }
-    return tran_arr;
-}
-//************************************************
-void Cholesky(int d,double*S,double*D){
-    //---------------------------------------------//
-    // Solve cholesky of an array
-    // Inputs: 
-    //    d: size
-    //    S: input array
-    //    D: output array. Cholesky of input array. 
-    //---------------------------------------------//
-    for(int k=0;k<d;++k){
-        double sum=0.;
-        for(int p=0;p<k;++p)sum+=D[k*d+p]*D[k*d+p];
-        D[k*d+k]=sqrt(S[k*d+k]-sum);
-        for(int i=k+1;i<d;++i){
-           double sum=0.;
-           for(int p=0;p<k;++p)sum+=D[i*d+p]*D[k*d+p];
-           D[i*d+k]=(S[i*d+k]-sum)/D[k*d+k];
-        }
-    }
-}
 void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn ){
     //---------------------------------------------//
     // Inputs: 
@@ -400,6 +251,7 @@ void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn ){
     double CKPsiX[n][n];//initilize to zeros
     int EyeN[n][n] ;
     int counter=0;int b; //increment varables
+    // Zero initialization
     for(int ii = 0; ii<n;ii++){ 
         for(int jj = 0; jj<n;jj++){
             PsiX[ii][jj] = 0;
@@ -431,60 +283,6 @@ void buildPsi(Arr& x, double* theta, Arr& CKPsixRtn ){
         }
     }
 }
-double* ArraybuildPsi(int n,double* x,double* theta ){
-    //---------------------------------------------//
-    //solve for psi, not apart of the cokriging class due to information hiding, I don't want 
-    // this function using any private variables.
-    // However I should be able to make this more opject oriented, by converting the class to a kriging class
-    // instead of a cokriging, that cokriging calls when it creates a cokriging model. Since cokriging is mainly just a 
-    // series of kriging functions
-    //---------------------------------------------//
-    double PsiX[n][n];//initilize to zeros
-    double CKPsiX[n][n];//initilize to zeros
-    int EyeN[n][n] ;
-    int counter=0;int b; //increment varables
-    double* CKPsixRtn = new double[n*n];
-    for(int ii = 0; ii<n;ii++){ 
-        for(int jj = 0; jj<n;jj++){
-            PsiX[ii][jj] = 0;
-            CKPsiX[ii][jj] = 0;
-            CKPsixRtn[counter]=0;
-            EyeN[ii][jj]=0;
-            counter++;
-        } 
-    } 
-    // set diagonal to 1;
-    for(int ii = 0; ii<n;ii++){EyeN[ii][ii] = 1;}
-    int p =2;
-    //solve for Psi Cheap
-    for(int ii = 0; ii<n;ii++){ 
-        for(int jj = ii+1; jj <n;jj++){
-            PsiX[ii][jj] = exp(-sum(x,x,theta,p,ii,jj));
-        }
-    }
-    float eps = 2.2204*pow(10,-16);
-    counter = 0;b = 0;
-    for(int ii = 0; ii<n;ii++){ 
-        for(int jj = 0; jj <n;jj++){
-            CKPsiX[ii][jj] = PsiX[ii][jj] + PsiX[jj][ii]+EyeN[ii][jj]+EyeN[ii][jj]*eps;
-            CKPsixRtn[b+counter*n] = CKPsiX[ii][jj];
-            counter++;
-            if(counter == n){
-               counter =0;
-               b++;
-            }
-        }
-    }
-   return CKPsixRtn;
-}
-//************************************************
-void cokriging::write(){
-    //---------------------------------------------//
-    // used for debugging
-    // Print private variables to screen
-    // Print input variables to screen   
-    //---------------------------------------------//
-}
 //************************************************
 void cokriging::predictor(double* x,int n){
     //---------------------------------------------//
@@ -509,27 +307,9 @@ void cokriging::predictor(double* x,int n){
      
     //solve the surrogate
     Arr Yout_a = c_a*(UC_a/(UC_a.transpose()/diffy_mu_a));
-
+    
+    //output to screen
     cout<<"Xin " <<x_a.element(0,0) << " Yout: "<< Yout_a.element(0,0)<<endl;
-}
-//************************************************
-double* c_pred(double sigma, double rho,double x1[], int n1, double x2[],int n2, double theta[]){
-    int p =2;
-    double* c = new double[n1];
-    for(int ii=0;ii<n1;ii++){
-        //get sum value, different from previous usage.
-        c[ii]=rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii,n2));
-    }
-    cout << endl;
-    return c;
-}
-//************************************************
-double sum_pred(double x1[],double x2[],double theta[],int p,int ii,int n){
-    double sumVal = 0;
-    for(int jj = 0;jj<n;jj++){
-        sumVal+=theta[0]*pow(abs(x1[ii]-x2[jj]),p);
-    }
-    return sumVal;
 }
 //************************************************
 Arr c_pred(double sigma, double rho,Arr x1, Arr x2, double theta[]){
@@ -539,7 +319,6 @@ Arr c_pred(double sigma, double rho,Arr x1, Arr x2, double theta[]){
     for(int ii=0;ii<n1;ii++){
         c.push(rho*sigma*exp(-sum_pred(x1,x2,theta,p,ii)),ii,0);
     }
-    cout << endl;
     return c;
 }
 //************************************************
